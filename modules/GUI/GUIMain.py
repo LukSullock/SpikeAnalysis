@@ -1,0 +1,129 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Aug 24 18:42:46 2024
+
+@author: LukSu
+"""
+import os
+import sys
+import matplotlib.pyplot as plt
+from matplotlib.colors import TABLEAU_COLORS
+from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
+from modules.GUI.Ui_SpikeSorting import Ui_MainWindow
+from modules.GUI.GUIFunctions import ViewRaw, RunSorting, SavePlots
+
+class Main(QMainWindow, Ui_MainWindow):
+    def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewRawfnc):
+        super(Main, self).__init__()
+        self.setupUi(self)
+        self.colorSTR=TABLEAU_COLORS
+        self.canvassen=[]
+        self.canvasboxes=[]
+        self.text=""
+        
+        self.RunSorting=RunSortingfnc
+        self.SavePlots=SavePlotsfnc
+        self.viewRaw=ViewRawfnc
+        
+        #Connect functions
+        self.comb_file.activated.connect(self.CheckFiles)
+        self.CheckFiles()
+        self.cb_selectall.stateChanged.connect(self.select_all)
+        self.cb_wholerecording.stateChanged.connect(self.deselect_select_all)
+        self.cb_selectedframes.stateChanged.connect(self.deselect_select_all)
+        self.cb_spikesorting.stateChanged.connect(self.deselect_select_all)
+        self.cb_averagewaveform.stateChanged.connect(self.deselect_select_all)
+        self.cb_interspikeinterval.stateChanged.connect(self.deselect_select_all)
+        self.cb_amplitudedistribution.stateChanged.connect(self.deselect_select_all)
+        self.ccb_channels.currentTextChanged.connect(self.OutputNameChange)
+        self.le_condition.textEdited.connect(self.OutputNameChange)
+        self.bt_go.clicked.connect(lambda: self.RunSorting(self))
+        self.bt_saveall.clicked.connect(lambda: self.SavePlots(self))
+        self.bt_closeplots.clicked.connect(self.closePlots)
+        self.bt_file.clicked.connect(lambda: self.viewRaw(self))
+        self.plt_container.tabCloseRequested.connect(lambda indx: self.closeTab(indx))
+        
+    def closeTab(self, indx):
+        self.plt_container.removeTab(indx)
+        self.canvassen.pop(indx)
+        self.canvasboxes.pop(indx)
+    
+    def closePlots(self):
+        plt.close("all")
+        self.canvassen=[]
+        self.canvasboxes=[]
+        self.plt_container.clear()
+    
+    def deselect_select_all(self):
+        self.cb_selectall.stateChanged.disconnect(self.select_all)
+        if all([self.cb_wholerecording.isChecked(), self.cb_selectedframes.isChecked(), 
+               self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
+               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
+            self.cb_selectall.setChecked(True)
+        elif not all([self.cb_wholerecording.isChecked(), self.cb_selectedframes.isChecked(), 
+               self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
+               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
+            self.cb_selectall.setChecked(False)
+        self.cb_selectall.stateChanged.connect(self.select_all)
+        
+    def select_all(self):
+        state=self.cb_selectall.isChecked()
+        self.cb_wholerecording.setChecked(state)
+        self.cb_selectedframes.setChecked(state)
+        self.cb_spikesorting.setChecked(state)
+        self.cb_averagewaveform.setChecked(state)
+        self.cb_interspikeinterval.setChecked(state)
+        self.cb_amplitudedistribution.setChecked(state)
+        
+    def CheckFiles(self):
+        #Update combobox with file options
+        files=os.listdir("data")
+        for ii in reversed(range(len(files))):
+            if ".wav" not in files[ii]:
+                del files[ii]
+        #First disconnect function to be able to update combobox list, then reconnect function
+        self.comb_file.activated.disconnect(self.CheckFiles)
+        if len(files)+1!=self.comb_file.count():
+            for ii in reversed(range(self.comb_file.count())):
+                if ii!=0:
+                    self.comb_file.removeItem(ii)
+            #self.comb_file.clear()
+            #self.comb_file.addItem("Select file")
+            self.comb_file.addItems(files)
+        if self.text!=str(self.comb_file.currentText()):
+            self.text=f'{str(self.comb_file.currentText())}'
+            if ".wav" in self.text:
+                self.viewRaw(self)
+        self.OutputNameChange()
+        self.comb_file.activated.connect(self.CheckFiles)
+        
+    def OutputNameChange(self):
+        if ".wav" not in str(self.comb_file.currentText()):
+            self.le_outputname.setText("")
+            return
+        text=self.text[:-4]
+        if not "Select" in str(self.ccb_channels.currentText()):
+            text+=f'_Channel{"_".join([str(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")])}'
+        if self.le_condition.text():
+            text+=f'_Condition_{str(self.le_condition.text())}'
+        self.le_outputname.setText(text)
+    
+    def ErrorMsg(self, title, text):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Critical)
+        msg.setText(title)
+        msg.setInformativeText(text)
+        msg.setWindowTitle("Error")
+        msg.exec_()
+    
+    def closeEvent(self, event):
+        plt.close("all")
+        event.accept()
+
+def start():
+    app = QApplication(sys.argv)
+    app.setQuitOnLastWindowClosed(True)
+    ui = Main(RunSortingfnc=RunSorting, SavePlotsfnc=SavePlots, ViewRawfnc=ViewRaw)
+    ui.show()
+    sys.exit(app.exec())
+    
