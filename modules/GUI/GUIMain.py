@@ -127,8 +127,8 @@ class Main(QMainWindow, Ui_MainWindow):
             self.le_outputname.setText("")
             return
         text=self.text[:-4]
-        if not "Select" in str(self.ccb_channels.currentText()):
-            text+=f'_Channel{"_".join([str(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")])}'
+        #if not "Select" in str(self.ccb_channels.currentText()):
+        #    text+=f'_Channel{"_".join([str(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")])}'
         if self.le_condition.text():
             text+=f'_Condition_{str(self.le_condition.text())}'
         self.le_outputname.setText(text)

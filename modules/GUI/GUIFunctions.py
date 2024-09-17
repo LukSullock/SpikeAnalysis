@@ -40,7 +40,7 @@ class MplCanvas(FigureCanvas): #Custom canvas to be able to have in GUI plots
         [self.axs.append(self.fig.add_subplot(size,1,ii+2,sharex=self.axs[0],sharey=self.axs[0])) for ii in range(size-1)]
         super(MplCanvas, self).__init__(self.fig)
 
-class stdfigure(object): #Dummy class to be able to handle out of GUI plots the same as in GUI plots.
+class stdfigure(FigureCanvas): #Dummy class to be able to handle out of GUI plots the same as in GUI plots.
     pass
 
 def CreateCanvas(pltsize, pltext=False):
@@ -112,7 +112,7 @@ def RunSorting(self):
     #Raw recording
     if self.cb_rawrecording.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=PlotWholeRecording(canvas, datasel, {}, self.time, self.colorSTR, channels=channels)
+        canvas=PlotWholeRecording(canvas, datasel, {}, self.time, self.colorSTR, channels=channels, title="Raw")
         addcanvas(self, widget, canvas, "Raw", f"Raw recording (ch{channels})")
     self.xlim,self.DataSelection=DataSelect(datasel, self.markers, self.framerate, str(self.le_timeinterval.text()))
     if not self.xlim: self.ErrorMsg(self.DataSelection[0],self.DataSelection[1]); return
@@ -250,8 +250,12 @@ def IntervalChange(self):
     
 def SavePlots(self):
     #Get data, save everything, then close all plots
+    self.closePlots()
+    self.cb_externalplot.setChecked(True)
     ViewWhole(self)
+    ThresholdChange(self)
+    CutoffChange(self)
+    IntervalChange(self)
     self.RunSorting(self)
-    print(self.xlim)
     SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh)
     #plt.close('all')

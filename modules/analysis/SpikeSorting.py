@@ -30,7 +30,7 @@ matplotlib.rcParams['ps.fonttype'] = 42
 matplotlib.use('QtAgg')
 import traceback
 from collections import defaultdict
-    
+
     
 def OpenRecording(folder, filename):
     #import .wav file and corresponding marker file
@@ -109,7 +109,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
         
     cl2=[[] for _ in range(len(DataSelection))]
     maxval=[[] for _ in range(len(DataSelection))]
-    #[peak data], [time], [plot height of points]
+    #clusters: [[peak data], [time], [plot height of points], ["Cluster threshold {threshold}"]
     clusters=[[[[],[],[],f"Cluster threshold {th}"] for ii,th in enumerate(thresholds)] for _ in range(len(DataSelection))]
     #Get largest peak of selected data
     for ii in range(len(DataSelection)):
@@ -127,19 +127,20 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
             clusters[ii][clusterN][2] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
-def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, plot=False):
+def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
     #For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
     #Save files in path where main file is located
     #1 csv file per cluster and 1 pdf file with all plots
-    #NOTE: there is no check for duplicate file names, old files will likely be overridden
-    for ii,cl in enumerate(clusters):
-        oridf=pd.DataFrame({cl[3]: cl[1]})
-        adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
-        meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
-        meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
-        cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh]})
-        df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
-        df1.to_csv(os.path.join(folder,f'spiketimes_{output}_cluster{ii}.csv'),index=False)
+    #NOTE: there is no check for duplicate file names, old files will be overridden
+    for jj,chan in enumerate(clusters):
+        for ii,cl in enumerate(chan):
+            oridf=pd.DataFrame({cl[3]: cl[1]})
+            adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
+            meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
+            meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
+            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh]})
+            df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
+            df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{jj+1}_cluster{ii+1}.csv'),index=False)
     p=PdfPages(os.path.join(folder,f"Plots_{output}.pdf"))
     figs=[plt.figure(n) for n in plt.get_fignums()]
     [fig.savefig(p, format='pdf') for fig in figs]

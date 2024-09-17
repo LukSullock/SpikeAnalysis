@@ -60,7 +60,7 @@ def PlotHistFigure(canvas, data, bins, framerate, xlabel="", ylabel="", *, title
     #    canvas.axs[ii].legend(frameon=False)
     return canvas
 
-def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1]):
+def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], title="Whole"):
     colors=itertools.cycle(colorSTR)
     vlines=[]
     for key in markers.keys():
@@ -69,7 +69,7 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1]):
         else:
             [vlines.append(submark) for submark in markers[key]]
     
-    canvas=PlotDataFigure(canvas, data, time, "Time (s)", "Amplitude (a.u.)", "k", colorcycle=colors, vlines=vlines, title=f"Whole recording (ch{channels})")
+    canvas=PlotDataFigure(canvas, data, time, "Time (s)", "Amplitude (a.u.)", "k", colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
 def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=1):
