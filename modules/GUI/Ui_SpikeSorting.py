@@ -137,8 +137,8 @@ class Ui_MainWindow(object):
         self.cb_selectedframes.setObjectName(u"cb_selectedframes")
         self.cb_spikesorting = QCheckBox(self.centralwidget)
         self.cb_spikesorting.setObjectName(u"cb_spikesorting")
-        self.cb_wholerecording = QCheckBox(self.centralwidget)
-        self.cb_wholerecording.setObjectName(u"cb_wholerecording")
+        self.cb_rawrecording = QCheckBox(self.centralwidget)
+        self.cb_rawrecording.setObjectName(u"cb_rawrecording")
 #Comboboxes
         self.comb_file = QComboBox(self.centralwidget)
         self.comb_file.setObjectName(u"comb_file")
@@ -180,12 +180,14 @@ class Ui_MainWindow(object):
         self.sb_cutoff = QSpinBox(self.centralwidget)
         self.sb_cutoff.setObjectName(u"sb_cutoff")
         self.sb_cutoff.setMaximum(999999999)
+        self.sb_cutoff.setMinimum(1)
         self.sb_refractair = QDoubleSpinBox(self.centralwidget)
         self.sb_refractair.setObjectName(u"sb_refractair")
         self.sb_refractair.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedKingdom))
-        self.sb_refractair.setDecimals(3)
+        self.sb_refractair.setDecimals(4)
         self.sb_refractair.setSingleStep(0.001)
         self.sb_refractair.setValue(0.005)
+        self.sb_refractair.setMinimum(0.0001)
 #Tab widget
         self.plt_container = QTabWidget(self.centralwidget)
         self.plt_container.setObjectName(u"plt_container")
@@ -215,7 +217,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addItem(self.horizontalSpacer_2, 13, 3, 1, 1)
         
         self.gridLayout.addWidget(self.cb_selectall, 0, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_wholerecording, 1, 4, 1, 1)
+        self.gridLayout.addWidget(self.cb_rawrecording, 1, 4, 1, 1)
         self.gridLayout.addWidget(self.cb_selectedframes, 2, 4, 1, 1)
         self.gridLayout.addWidget(self.cb_spikesorting, 3, 4, 1, 1)
         self.gridLayout.addWidget(self.cb_averagewaveform, 4, 4, 1, 1)
@@ -250,7 +252,7 @@ class Ui_MainWindow(object):
         self.lbl_output.setText(QCoreApplication.translate("MainWindow", u"Output", None))
         self.le_condition.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Condition name", None))
         self.cb_interspikeinterval.setText(QCoreApplication.translate("MainWindow", u"Interspike interval", None))
-        self.cb_wholerecording.setText(QCoreApplication.translate("MainWindow", u"Whole recording", None))
+        self.cb_rawrecording.setText(QCoreApplication.translate("MainWindow", u"Raw recording", None))
         self.cb_externalplot.setText(QCoreApplication.translate("MainWindow", u"Plot in external windows", None))
         self.cb_cutoff.setText(QCoreApplication.translate("MainWindow", u"Cut off threshold", None))
         self.cb_averagewaveform.setText(QCoreApplication.translate("MainWindow", u"Average waveform", None))
@@ -259,8 +261,8 @@ class Ui_MainWindow(object):
         self.le_timeinterval.setToolTip(QCoreApplication.translate("MainWindow",
 u"Format: [Start time 1] to [Stop time 2] and [Start time 2] to [Stop time 2] etc.\n"
 "e.g. 1: marker 1 to 61 and 120 to marker 2\n"
-"e.g. 2:1 to 60\n"
-"e.g. 3:marker 1 to marker 3\n"
+"e.g. 2: 1 to 60\n"
+"e.g. 3: marker 1 to marker 3\n"
 "marker can be denoted with m, capital letters possible, ", None))
         self.le_timeinterval.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Time intervals in seconds or by marker", None))
         self.cb_spikesorting.setText(QCoreApplication.translate("MainWindow", u"Spike sorting", None))
@@ -272,7 +274,7 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
 "e.g. 2: 700 1200 1400\n"
 "Spacers between thresholds can be a comma or space ", None))
         self.le_thresholds.setPlaceholderText(QCoreApplication.translate("MainWindow", u"Thresholds in a.u.", None))
-        self.bt_file.setText(QCoreApplication.translate("MainWindow", u"View raw data", None))
+        self.bt_file.setText(QCoreApplication.translate("MainWindow", u"View whole recording", None))
         self.lbl_condition.setText(QCoreApplication.translate("MainWindow", u"Condition", None))
         self.bt_closeplots.setText(QCoreApplication.translate("MainWindow", u"Close all plots", None))
         self.bt_go.setText(QCoreApplication.translate("MainWindow", u"Run selected", None))
@@ -280,7 +282,7 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.cb_selectall.setText(QCoreApplication.translate("MainWindow", u"Select all", None))
         self.bt_saveall.setText(QCoreApplication.translate("MainWindow", u"Save selected data and plots", None))
         self.bt_quit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-        self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between peaks", None))
+        self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
         self.actionOpen_file.setText(QCoreApplication.translate("MainWindow", u"Open file...", None))
     # retranslateUi

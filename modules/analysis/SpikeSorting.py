@@ -96,9 +96,9 @@ def DataSelect(data,markers,framerate,times):
 
 def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thresh):
     if len(thresholdsSTR)==0: thresholdsSTR="500" #Default value if no threshold is given
-    thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)]
+    thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)] #regular expression to filter out all numbers and convert each to int
     thresholdstmp.sort()
-    thresholdstmp=thresholdstmp[::-1]
+    thresholdstmp=thresholdstmp[::-1] #reverse the list
     thresholds=list(set(thresholdstmp))
     # First, get everything above cutoff if cutoff is given
     cutoff1=[[[]] for _ in range(len(DataSelection))]
@@ -127,7 +127,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
             clusters[ii][clusterN][2] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
-def SaveAll(clusters,start_time,stop_time,folder,channel,output,cutoff_thresh, plot=False):
+def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, plot=False):
     #For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
     #Save files in path where main file is located
     #1 csv file per cluster and 1 pdf file with all plots

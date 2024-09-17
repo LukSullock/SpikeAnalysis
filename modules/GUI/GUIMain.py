@@ -23,33 +23,45 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import TABLEAU_COLORS
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
 from modules.GUI.Ui_SpikeSorting import Ui_MainWindow
-from modules.GUI.GUIFunctions import ViewRaw, RunSorting, SavePlots
+from modules.GUI.GUIFunctions import (ViewWhole, RunSorting, ThresholdChange,
+                                      SavePlots, CutoffChange, IntervalChange)
 
 class Main(QMainWindow, Ui_MainWindow):
-    def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewRawfnc):
+    def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewRawfnc, ThrChangefnc,
+                 CutoffChangefnc, IntervalChangefnc):
         super(Main, self).__init__()
         self.setupUi(self)
         self.colorSTR=TABLEAU_COLORS
         self.canvassen=[]
         self.canvasboxes=[]
+        self.threshlines=[]
+        self.cutoffrec=[]
+        self.intervals=[]
         self.text=""
         
         self.RunSorting=RunSortingfnc
         self.SavePlots=SavePlotsfnc
         self.viewRaw=ViewRawfnc
+        self.ThresholdChange=ThrChangefnc
+        self.CutoffChange=CutoffChangefnc
+        self.IntervalChange=IntervalChangefnc
         
         #Connect functions
         self.comb_file.activated.connect(self.CheckFiles)
         self.CheckFiles()
         self.cb_selectall.stateChanged.connect(self.select_all)
-        self.cb_wholerecording.stateChanged.connect(self.deselect_select_all)
+        self.cb_rawrecording.stateChanged.connect(self.deselect_select_all)
         self.cb_selectedframes.stateChanged.connect(self.deselect_select_all)
         self.cb_spikesorting.stateChanged.connect(self.deselect_select_all)
         self.cb_averagewaveform.stateChanged.connect(self.deselect_select_all)
         self.cb_interspikeinterval.stateChanged.connect(self.deselect_select_all)
         self.cb_amplitudedistribution.stateChanged.connect(self.deselect_select_all)
+        self.cb_cutoff.stateChanged.connect(lambda: self.CutoffChange(self))
+        self.sb_cutoff.valueChanged.connect(lambda: self.CutoffChange(self))
         self.ccb_channels.currentTextChanged.connect(self.OutputNameChange)
         self.le_condition.textEdited.connect(self.OutputNameChange)
+        self.le_timeinterval.textEdited.connect(lambda: self.IntervalChange(self))
+        self.le_thresholds.textEdited.connect(lambda: self.ThresholdChange(self))
         self.bt_go.clicked.connect(lambda: self.RunSorting(self))
         self.bt_saveall.clicked.connect(lambda: self.SavePlots(self))
         self.bt_closeplots.clicked.connect(self.closePlots)
@@ -69,11 +81,11 @@ class Main(QMainWindow, Ui_MainWindow):
     
     def deselect_select_all(self):
         self.cb_selectall.stateChanged.disconnect(self.select_all)
-        if all([self.cb_wholerecording.isChecked(), self.cb_selectedframes.isChecked(), 
+        if all([self.cb_rawrecording.isChecked(), self.cb_selectedframes.isChecked(), 
                self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
                self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
             self.cb_selectall.setChecked(True)
-        elif not all([self.cb_wholerecording.isChecked(), self.cb_selectedframes.isChecked(), 
+        elif not all([self.cb_rawrecording.isChecked(), self.cb_selectedframes.isChecked(), 
                self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
                self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
             self.cb_selectall.setChecked(False)
@@ -81,7 +93,7 @@ class Main(QMainWindow, Ui_MainWindow):
         
     def select_all(self):
         state=self.cb_selectall.isChecked()
-        self.cb_wholerecording.setChecked(state)
+        self.cb_rawrecording.setChecked(state)
         self.cb_selectedframes.setChecked(state)
         self.cb_spikesorting.setChecked(state)
         self.cb_averagewaveform.setChecked(state)
@@ -136,7 +148,9 @@ class Main(QMainWindow, Ui_MainWindow):
 def start():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
-    ui = Main(RunSortingfnc=RunSorting, SavePlotsfnc=SavePlots, ViewRawfnc=ViewRaw)
+    ui = Main(RunSortingfnc=RunSorting, SavePlotsfnc=SavePlots,
+              ViewRawfnc=ViewWhole, ThrChangefnc=ThresholdChange,
+              CutoffChangefnc=CutoffChange, IntervalChangefnc=IntervalChange)
     ui.show()
     sys.exit(app.exec())
         

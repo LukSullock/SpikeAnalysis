@@ -22,12 +22,3 @@ from modules.GUI.GUIMain import start as Gui
 
 if __name__=="__main__":
     Gui()
-
-"""To do
->Burst analyse
->Threshold plotting
-
->Github wiki
->Github handleiding
->Programma handleiding
-"""

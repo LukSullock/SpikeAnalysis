@@ -24,8 +24,10 @@ def PlotDataFigure(canvas, data, time, xlabel, ylabel, color, *, xlim=False, lw=
     canvas.fig.suptitle(title)
     for ii,chan in enumerate(data):
         canvas.axs[ii].plot(time, chan, color = color, lw=lw)
-        for line in vlines:
-            canvas.axs[ii].axvline(line, color=next(colorcycle))
+    for line in vlines:
+        clr=next(colorcycle)
+        for ii,_ in enumerate(data):
+            canvas.axs[ii].axvline(line, color=clr)
     for ii,plttext in enumerate(text):
         canvas.axs[ii].text(0.5,0.6,plttext,
                      horizontalalignment='center',
@@ -108,7 +110,7 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=1
                 all_wvf_cl.append([wvf_x, np.mean([yy[1] for yy in all_wvf_cl], axis=0), 2, 1, 'r'])
                 text=[]
             elif not wvf_y:
-                text=[f"Not enough data\nGot {len(cl[0][0])} datapoints\nAtleast 3 are required (first and last are skipped)"]
+                text=[f"Not enough data\nGot {len(cl[1][1:-1])} datapoints\nAtleast 3 are required (first and last are skipped)"]
             canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (s)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"Average waveforms ch{ii+1} {cl[3]}")
             clus.append(f"Average waveforms ch{ii+1} {cl[3]}")
             n_cnv+=1
@@ -123,6 +125,8 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR):
     canvas=PlotHistFigure(canvas, spike_times, bins, framerate, xlabel="Interspike interval (ms)",
                        ylabel="Normalized distribution", title="Interspike interval",
                        colorcycle=colors, fr_cl=fr_cl)
+    for ii,_ in enumerate(canvas.axs):
+        canvas.axs[ii].set_xscale('log')
     return canvas
 
 def AmplitudeDistribution(canvas, clusters,framerate,colorSTR):
