@@ -27,7 +27,7 @@ from modules.GUI.GUIFunctions import (ViewWhole, RunSorting, ThresholdChange,
                                       SavePlots, CutoffChange, IntervalChange)
 
 class Main(QMainWindow, Ui_MainWindow):
-    def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewRawfnc, ThrChangefnc,
+    def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewWholefnc, ThrChangefnc,
                  CutoffChangefnc, IntervalChangefnc):
         super(Main, self).__init__()
         self.setupUi(self)
@@ -41,7 +41,7 @@ class Main(QMainWindow, Ui_MainWindow):
         
         self.RunSorting=RunSortingfnc
         self.SavePlots=SavePlotsfnc
-        self.viewRaw=ViewRawfnc
+        self.viewWhole=ViewWholefnc
         self.ThresholdChange=ThrChangefnc
         self.CutoffChange=CutoffChangefnc
         self.IntervalChange=IntervalChangefnc
@@ -65,7 +65,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.bt_go.clicked.connect(lambda: self.RunSorting(self))
         self.bt_saveall.clicked.connect(lambda: self.SavePlots(self))
         self.bt_closeplots.clicked.connect(self.closePlots)
-        self.bt_file.clicked.connect(lambda: self.viewRaw(self))
+        self.bt_file.clicked.connect(lambda: self.viewWhole(self))
         self.plt_container.tabCloseRequested.connect(lambda indx: self.closeTab(indx))
         
     def closeTab(self, indx):
@@ -118,7 +118,7 @@ class Main(QMainWindow, Ui_MainWindow):
         if self.text!=str(self.comb_file.currentText()):
             self.text=f'{str(self.comb_file.currentText())}'
             if ".wav" in self.text:
-                self.viewRaw(self)
+                self.viewWhole(self)
         self.OutputNameChange()
         self.comb_file.activated.connect(self.CheckFiles)
         
@@ -149,7 +149,7 @@ def start():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
     ui = Main(RunSortingfnc=RunSorting, SavePlotsfnc=SavePlots,
-              ViewRawfnc=ViewWhole, ThrChangefnc=ThresholdChange,
+              ViewWholefnc=ViewWhole, ThrChangefnc=ThresholdChange,
               CutoffChangefnc=CutoffChange, IntervalChangefnc=IntervalChange)
     ui.show()
     sys.exit(app.exec())

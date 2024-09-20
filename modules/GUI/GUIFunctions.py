@@ -199,7 +199,6 @@ def CutoffChange(self):
                 (0,cutoffthresh), xlim[1], ylim[1]-cutoffthresh, color=(1,0,0,0.3))))
     self.canvassen[ncnvs][0].draw_idle()
     
-
 def IntervalChange(self):
     #Remove old cut off threshold
     ncnvs=-1
@@ -231,7 +230,6 @@ def IntervalChange(self):
                     times[ii][jj]=float(times[ii][jj])
                 except ValueError as err:
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
-    
     start_time=[art[0] for art in times]
     stop_time=[art[1] for art in times]
     if ncnvs!=-1:
@@ -239,13 +237,13 @@ def IntervalChange(self):
             ylim=self.canvassen[ncnvs][0].axs[ii].get_ylim()
             xlim=self.canvassen[ncnvs][0].axs[ii].get_xlim()
             self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                (0,ylim[0]), start_time[0], 2*ylim[1], color=(1,0,0,0.3))))
+                (0,ylim[0]), start_time[0], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
             for jj,start in enumerate(start_time):
                 if jj==0: continue
                 self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                    (stop_time[jj-1],ylim[0]), start-stop_time[jj-1], 2*ylim[1], color=(1,0,0,0.3))))
+                    (stop_time[jj-1],ylim[0]), start-stop_time[jj-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
             self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                (stop_time[-1],ylim[0]), xlim[1]-stop_time[-1], 2*ylim[1], color=(1,0,0,0.3))))
+                (stop_time[-1],ylim[0]), xlim[1]-stop_time[-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
     self.canvassen[ncnvs][0].draw_idle()
     
 def SavePlots(self):

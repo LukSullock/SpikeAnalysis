@@ -28,6 +28,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 matplotlib.rcParams['pdf.fonttype'] = 42 # necessary to make the text editable
 matplotlib.rcParams['ps.fonttype'] = 42
 matplotlib.use('QtAgg')
+if int(np.__version__.split(".")[0])>1: np.set_printoptions(legacy='1.25')
 import traceback
 from collections import defaultdict
 
