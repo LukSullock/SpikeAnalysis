@@ -39,8 +39,8 @@ def PlotDataFigure(canvas, data, time, xlabel, ylabel, color, *, xlim=False, lw=
             canvas.axs[ii].plot(curve[0],curve[1],lw=curve[2],alpha=curve[3],color=curve[4])
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
-    #for ii in range(len(canvas.axs)):    
-    #    canvas.axs[ii].legend(frameon=False)
+    for ii in range(len(canvas.axs)):    ###This one needs fixing
+        canvas.axs[ii].legend(frameon=False)
     for ii,chan in enumerate(scatterpoints):
         for clusterN in range(len(chan)):
             canvas.axs[ii].scatter(scatterpoints[ii][clusterN][1] , scatterpoints[ii][clusterN][2], color = next(colorcycle), marker='o', label=scatterpoints[ii][clusterN][3])
@@ -56,8 +56,8 @@ def PlotHistFigure(canvas, data, bins, framerate, xlabel="", ylabel="", *, title
                 canvas.axs[ii].hist(np.diff(spikeset[0]), bins, density=True, color = next(colorcycle), alpha=0.5, label=f'{fr_cl[ii][jj][1]}')
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
-    #for ii in range(len(canvas.axs)):    
-    #    canvas.axs[ii].legend(frameon=False)
+    for ii in range(len(canvas.axs)):    
+        canvas.axs[ii].legend(frameon=False)
     return canvas
 
 def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], title="Whole"):

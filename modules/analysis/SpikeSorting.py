@@ -68,7 +68,8 @@ def DataSelect(data,markers,framerate,times):
         times[ii]=art.split(" to ")
     #If there is no given range, default to whole recording (without starting and ending 0.5 seconds)
     if not len(times[0][0]):
-        times=[["0.5", f"{len(data)/framerate-0.5}"]]
+        times=[["0.5", f"{len(data[0])/framerate-0.5}"]]
+    #Get the time stamps of markers when they are used
     for ii,th in enumerate(times):
         for jj,art in enumerate(th):
             #If marker then use maker time, otherwise convert string to float
@@ -84,7 +85,6 @@ def DataSelect(data,markers,framerate,times):
                     times[ii][jj]=float(times[ii][jj])
                 except ValueError as err:
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
-                    
     
     start_time=[art[0] for art in times]
     stop_time=[art[1] for art in times]
@@ -98,7 +98,7 @@ def DataSelect(data,markers,framerate,times):
 
 
 def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thresh):
-    if len(thresholdsSTR)==0: thresholdsSTR="500" #Default value if no threshold is given
+    if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
     thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)] #regular expression to filter out all numbers and convert each to int
     thresholdstmp.sort()
     thresholdstmp=thresholdstmp[::-1] #reverse the list

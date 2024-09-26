@@ -72,7 +72,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.plt_container.removeTab(indx)
         self.canvassen.pop(indx)
         self.canvasboxes.pop(indx)
-    
+        
     def closePlots(self):
         plt.close("all")
         self.canvassen=[]

@@ -72,14 +72,12 @@ def ViewWhole(self):
     self.lbl_markers.setText(f"Markers:\n{'\n'.join([f'{key}: {self.markers[key]}' for key in self.markers.keys()])}")
     channelc=self.ccb_channels.count()-1
     channels=[ii+1 for ii in range(channelc)]
-    inplot=self.cb_externalplot.isChecked()
-    widget, canvas=CreateCanvas(len(self.data), inplot)
+    widget, canvas=CreateCanvas(len(self.data))
     canvas=PlotWholeRecording(canvas, self.data, self.markers, self.time, self.colorSTR, channels=channels)
     self.canvassen.append([canvas, "Whole"])
-    if not self.cb_externalplot.isChecked():
-        self.canvasboxes.append(widget)
-        self.plt_container.addTab(self.canvasboxes[-1], f"Whole recording (ch{channels})")
-        self.canvassen[-1][0].draw()
+    self.canvasboxes.append(widget)
+    self.plt_container.addTab(self.canvasboxes[-1], f"Whole recording (ch{channels})")
+    self.canvassen[-1][0].draw()
 
 def addcanvas(self, widget, canvas, title, tab):
     self.canvassen.append([canvas, title])
@@ -115,7 +113,7 @@ def RunSorting(self):
         canvas=PlotWholeRecording(canvas, datasel, {}, self.time, self.colorSTR, channels=channels, title="Raw")
         addcanvas(self, widget, canvas, "Raw", f"Raw recording (ch{channels})")
     self.xlim,self.DataSelection=DataSelect(datasel, self.markers, self.framerate, str(self.le_timeinterval.text()))
-    if not self.xlim: self.ErrorMsg(self.DataSelection[0],self.DataSelection[1]); return
+    if not self.xlim: self.ErrorMsg("Error","No time stamps received"); return
     #Plot selected time frame
     if self.cb_selectedframes.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
