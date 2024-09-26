@@ -47,8 +47,10 @@ def OpenRecording(folder, filename):
     
     #setup data from import .wav file
     framerate = rec[0]
-    data=[[point[chan-1] for point in rec[1]] for chan in range(len(rec[1][0]))]
-    
+    if np.int16==type(rec[1][0]): #when single channel recording
+        data=[[point for point in rec[1]] for _ in range(1)]
+    else: #with more than 1 channel recording
+        data=[[point[chan-1] for point in rec[1]] for chan in range(len(rec[1][0]))]
     nframes = len(data[0])
     time = [x/framerate for x in np.arange(nframes)] # in seconds
 
