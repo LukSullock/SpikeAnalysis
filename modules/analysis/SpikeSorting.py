@@ -100,9 +100,9 @@ def DataSelect(data,markers,framerate,times):
 def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thresh):
     if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
     thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)] #regular expression to filter out all numbers and convert each to int
-    thresholdstmp.sort()
-    thresholdstmp=thresholdstmp[::-1] #reverse the list
     thresholds=list(set(thresholdstmp))
+    thresholds.sort()
+    thresholds=thresholds[::-1] #reverse the list
     # First, get everything above cutoff if cutoff is given
     cutoff1=[[[]] for _ in range(len(DataSelection))]
     if cutoff_thresh:

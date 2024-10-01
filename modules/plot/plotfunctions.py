@@ -72,7 +72,7 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], t
     canvas=PlotDataFigure(canvas, data, time, "Time (s)", "Amplitude (a.u.)", "k", colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
-def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=1):
+def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=[1], title="Partial"):
     #Plot the selected data
     colors=itertools.cycle(colorSTR)
     vlines=[]
@@ -81,16 +81,16 @@ def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=1)
             vlines.append(markers[key])
         else:
             [vlines.append(submark) for submark in markers[key]]
-    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", xlim=xlim, colorcycle=colors, vlines=vlines, title=f"Partial recording (ch{channels})")
+    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", xlim=xlim, colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
-def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, *, channels=1):
+def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, *, channels=[1], title="Spike"):
     colors=itertools.cycle(colorSTR)
     # Last, create the plot which indicates which spike belongs to which cluster
-    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"Spike sorting (ch{channels})")
+    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"{title} sorting (ch{channels})")
     return canvas
 
-def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=1):
+def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[1], title="Average"):
     min_val = 5 # time in ms
     max_val = 10 # time in ms
     wvf_x = np.arange(-min_val, max_val, 1/framerate*1000) # time in ms
@@ -111,25 +111,25 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=1
                 text=[]
             elif not wvf_y:
                 text=[f"Not enough data\nGot {len(cl[1][1:-1])} datapoints\nAtleast 3 are required (first and last are skipped)"]
-            canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (s)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"Average waveforms ch{ii+1} {cl[3]}")
+            canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (s)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"{title} waveforms ch{ii+1} {cl[3]}")
             clus.append(f"Average waveforms ch{ii+1} {cl[3]}")
             n_cnv+=1
     return canvasses, clus
 
-def InterSpikeInterval(canvas, clusters,framerate,colorSTR):
+def InterSpikeInterval(canvas, clusters,framerate,colorSTR, title="Interspike"):
     colors=itertools.cycle(colorSTR)
     spike_times=[[[[x/framerate*1000 for x in cl[0][0]],cl[3]] for cl in chan] for chan in clusters]
     #average interspike interval, only used to check if there was enough data
     fr_cl=[[[1000/np.mean(np.diff(cl[0])),cl[1]] for cl in chan] for chan in spike_times]
     bins=np.arange(0,500,5)
     canvas=PlotHistFigure(canvas, spike_times, bins, framerate, xlabel="Interspike interval (ms)",
-                       ylabel="Normalized distribution", title="Interspike interval",
+                       ylabel="Normalized distribution", title="{title} interval",
                        colorcycle=colors, fr_cl=fr_cl)
     for ii,_ in enumerate(canvas.axs):
         canvas.axs[ii].set_xscale('log')
     return canvas
 
-def AmplitudeDistribution(canvas, clusters,framerate,colorSTR):
+def AmplitudeDistribution(canvas, clusters,framerate,colorSTR, title="Distribution"):
     colors=itertools.cycle(colorSTR)
     spike_times=[[[[x/framerate*1000 for x in cl[0][0]],cl[3]] for cl in chan] for chan in clusters]
     #average interspike interval, only used to check if there was enough data
@@ -137,6 +137,6 @@ def AmplitudeDistribution(canvas, clusters,framerate,colorSTR):
     spike_amp_cl = [[[cl[0][1]['peak_heights'], cl[3]] for cl in chan] for chan in clusters] # spike amplitude in arbitrary units (a.u.)
     bins=np.arange(0,5000,100)
     canvas=PlotHistFigure(canvas, spike_amp_cl, bins, framerate, xlabel="Amplitude (a.u.)",
-                   ylabel="Normalized distribution", title="Distribution of spike amplitude",
+                   ylabel="Normalized distribution", title="{title} of spike amplitude",
                    colorcycle=colors, fr_cl=fr_cl)
     return canvas

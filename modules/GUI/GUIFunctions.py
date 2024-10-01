@@ -61,6 +61,7 @@ def CreateCanvas(pltsize, pltext=False):
     return widget, canvas
 
 def ViewWhole(self):
+    file=str(self.comb_file.currentText())
     if ".wav" not in str(self.comb_file.currentText()):
         return
     self.data,self.markers,self.time,self.framerate=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
@@ -73,14 +74,14 @@ def ViewWhole(self):
     channelc=self.ccb_channels.count()-1
     channels=[ii+1 for ii in range(channelc)]
     widget, canvas=CreateCanvas(len(self.data))
-    canvas=PlotWholeRecording(canvas, self.data, self.markers, self.time, self.colorSTR, channels=channels)
-    self.canvassen.append([canvas, "Whole"])
+    canvas=PlotWholeRecording(canvas, self.data, self.markers, self.time, self.colorSTR, channels=channels, title=f"{file}: Whole")
+    self.canvassen.append([canvas, "Whole", file])
     self.canvasboxes.append(widget)
-    self.plt_container.addTab(self.canvasboxes[-1], f"Whole recording (ch{channels})")
+    self.plt_container.addTab(self.canvasboxes[-1], f"{file}: Whole recording (ch{channels})")
     self.canvassen[-1][0].draw()
 
-def addcanvas(self, widget, canvas, title, tab):
-    self.canvassen.append([canvas, title])
+def addcanvas(self, widget, canvas, title, tab, file):
+    self.canvassen.append([canvas, title, file])
     if widget:
         self.canvasboxes.append(widget)
         self.plt_container.addTab(self.canvasboxes[-1], tab)
@@ -89,6 +90,7 @@ def addcanvas(self, widget, canvas, title, tab):
         canvas.fig.show()
 
 def RunSorting(self):
+    file=str(self.comb_file.currentText())
     #Run all checked options, and necessary functions for variables
     #Check if plots need to be plotted in external windows or in GUI
     pltext=self.cb_externalplot.isChecked()
@@ -110,22 +112,22 @@ def RunSorting(self):
     #Raw recording
     if self.cb_rawrecording.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=PlotWholeRecording(canvas, datasel, {}, self.time, self.colorSTR, channels=channels, title="Raw")
-        addcanvas(self, widget, canvas, "Raw", f"Raw recording (ch{channels})")
+        canvas=PlotWholeRecording(canvas, datasel, {}, self.time, self.colorSTR, channels=channels, title=f"{file}: Raw")
+        addcanvas(self, widget, canvas, "Raw", f"{file}: Raw recording (ch{channels})", file)
     self.xlim,self.DataSelection=DataSelect(datasel, self.markers, self.framerate, str(self.le_timeinterval.text()))
     if not self.xlim: self.ErrorMsg("Error","No time stamps received"); return
     #Plot selected time frame
     if self.cb_selectedframes.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=PlotPartial(canvas, self.markers, self.DataSelection, self.time,self.xlim, self.colorSTR, channels=channels)
-        addcanvas(self, widget, canvas, "Partial", f"Partial recording (ch{channels})")
+        canvas=PlotPartial(canvas, self.markers, self.DataSelection, self.time,self.xlim, self.colorSTR, channels=channels, title=f"{file}: Partial")
+        addcanvas(self, widget, canvas, "Partial", f"{file}: Partial recording (ch{channels})", file)
     #Spike sorting
     self.clusters=SpikeSorting(self.DataSelection, str(self.le_thresholds.text()), self.sb_refractair.value(), self.framerate, self.time, self.cutoff_thresh)
     #Plot spike sorting
     if self.cb_spikesorting.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim,self.colorSTR, channels=channels)
-        addcanvas(self, widget, canvas, "Spike", f"Spike sorting (ch{channels})")
+        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim,self.colorSTR, channels=channels, title=f"{file}: Spike")
+        addcanvas(self, widget, canvas, "Spike", f"{file}: Spike sorting (ch{channels})", file)
     if self.cb_averagewaveform.isChecked():
         widgets=[]
         canvasses=[]
@@ -134,17 +136,17 @@ def RunSorting(self):
                 widget, canvas=CreateCanvas(1, pltext)
                 widgets.append(widget)
                 canvasses.append(canvas)
-        canvasses, clus=AverageWaveForm(canvasses, self.framerate, self.clusters, self.DataSelection, channels=channels)
+        canvasses, clus=AverageWaveForm(canvasses, self.framerate, self.clusters, self.DataSelection, channels=channels, title=f"{file}: Average")
         for ii, canvas in enumerate(canvasses):
-            addcanvas(self, widgets[ii], canvas, "AWave", clus[ii])
+            addcanvas(self, widgets[ii], canvas, "AWave", f"{file}: clus[ii]", file)
     if self.cb_interspikeinterval.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
         canvas=InterSpikeInterval(canvas, self.clusters,self.framerate,self.colorSTR)
-        addcanvas(self, widget, canvas, "ISI", f"Interspike interval (ch{channels})")
+        addcanvas(self, widget, canvas, "ISI", f"{file}: Interspike interval (ch{channels})", file)
     if self.cb_amplitudedistribution.isChecked():
         widget, canvas=CreateCanvas(len(datasel),pltext)
         canvas=AmplitudeDistribution(canvas, self.clusters,self.framerate,self.colorSTR)
-        addcanvas(self, widget, canvas, "AmpDis", f"Amplitude distribution (ch{channels})")
+        addcanvas(self, widget, canvas, "AmpDis", f"{file}: Amplitude distribution (ch{channels})", file)
 
 def ThresholdChange(self):
     #Remove old thresholds
