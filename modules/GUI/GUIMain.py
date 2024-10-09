@@ -133,14 +133,30 @@ class Main(QMainWindow, Ui_MainWindow):
             text+=f'_Condition_{str(self.le_condition.text())}'
         self.le_outputname.setText(text)
     
-    def ErrorMsg(self, title, text):
+    def ErrorMsg(self, text, subtext=""):
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
-        msg.setText(title)
-        msg.setInformativeText(text)
+        msg.setText(text)
+        msg.setInformativeText(subtext)
         msg.setWindowTitle("Error")
         msg.exec_()
-    
+    def WarningMsg(self, text, subtext=""):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setText(text)
+        msg.setInformativeText(subtext)
+        msg.setWindowTitle("Warning")
+        msg.exec_()
+    def WarningContinue(self, text, subtext):
+        msg=QMessageBox()
+        msg.setIcon(QMessageBox.Warning)
+        msg.setText(text)
+        msg.setInformativeText(subtext)
+        msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg.setWindowTitle("Warning")
+        reply=msg.exec_()
+        return reply
+        
     def closeEvent(self, event):
         plt.close("all")
         event.accept()

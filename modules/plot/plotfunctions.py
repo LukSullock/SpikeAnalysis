@@ -20,7 +20,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import itertools
 import numpy as np
 
-def PlotDataFigure(canvas, data, time, xlabel, ylabel, color, *, xlim=False, lw=1, curves=[], vlines=[],hlines=[], scatterpoints=[], colorcycle=itertools.cycle("rbymgc"), title="", text=[]):
+def PlotDataFigure(canvas, data, time, xlabel, ylabel, color, *, legend=False, xlim=False, lw=1, curves=[], vlines=[],hlines=[], scatterpoints=[], colorcycle=itertools.cycle("rbymgc"), title="", text=[]):
     canvas.fig.suptitle(title)
     for ii,chan in enumerate(data):
         canvas.axs[ii].plot(time, chan, color = color, lw=lw)
@@ -39,25 +39,27 @@ def PlotDataFigure(canvas, data, time, xlabel, ylabel, color, *, xlim=False, lw=
             canvas.axs[ii].plot(curve[0],curve[1],lw=curve[2],alpha=curve[3],color=curve[4])
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
-    for ii in range(len(canvas.axs)):    ###This one needs fixing
-        canvas.axs[ii].legend(frameon=False)
     for ii,chan in enumerate(scatterpoints):
         for clusterN in range(len(chan)):
             canvas.axs[ii].scatter(scatterpoints[ii][clusterN][1] , scatterpoints[ii][clusterN][2], color = next(colorcycle), marker='o', label=scatterpoints[ii][clusterN][3])
+    if legend:
+        for ii in range(len(canvas.axs)):    ###This one needs fixing
+            canvas.axs[ii].legend(frameon=False)
     if xlim:
         canvas.axs[0].set_xlim([xlim[0][0],xlim[1][-1]])
     return canvas
 
-def PlotHistFigure(canvas, data, bins, framerate, xlabel="", ylabel="", *, title="", colorcycle=itertools.cycle("rbymgc"), fr_cl):
+def PlotHistFigure(canvas, data, bins, framerate, xlabel="", ylabel="", *, legend=False, title="", colorcycle=itertools.cycle("rbymgc"), fr_cl):
     canvas.fig.suptitle(title)
     for ii, chan in enumerate(data):
         for jj, spikeset in enumerate(chan):
             if not np.isnan(fr_cl[ii][jj][0]):
-                canvas.axs[ii].hist(np.diff(spikeset[0]), bins, density=True, color = next(colorcycle), alpha=0.5, label=f'{fr_cl[ii][jj][1]}')
+                canvas.axs[ii].hist(np.diff(spikeset[0]), bins, density=True, color = next(colorcycle), alpha=0.5, label=f'{fr_cl[ii][jj][1]}', ec='black')
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
-    for ii in range(len(canvas.axs)):    
-        canvas.axs[ii].legend(frameon=False)
+    if legend:
+        for ii in range(len(canvas.axs)):    
+            canvas.axs[ii].legend(frameon=False)
     return canvas
 
 def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], title="Whole"):
@@ -87,7 +89,7 @@ def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=[1
 def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, *, channels=[1], title="Spike"):
     colors=itertools.cycle(colorSTR)
     # Last, create the plot which indicates which spike belongs to which cluster
-    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"{title} sorting (ch{channels})")
+    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", legend=[[f"T{clus[3][9:]}" for clus in ch] for ch in clusters], scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"{title} sorting (ch{channels})")
     return canvas
 
 def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[1], title="Average"):
@@ -121,10 +123,11 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR, title="Interspike"):
     spike_times=[[[[x/framerate*1000 for x in cl[0][0]],cl[3]] for cl in chan] for chan in clusters]
     #average interspike interval, only used to check if there was enough data
     fr_cl=[[[1000/np.mean(np.diff(cl[0])),cl[1]] for cl in chan] for chan in spike_times]
-    bins=np.arange(0,500,5)
+    #bins=np.arange(0,2000,5)
+    bins=np.logspace(np.log10(1),np.log10(20000),int(20000/200))
     canvas=PlotHistFigure(canvas, spike_times, bins, framerate, xlabel="Interspike interval (ms)",
-                       ylabel="Normalized distribution", title="{title} interval",
-                       colorcycle=colors, fr_cl=fr_cl)
+                       ylabel="Normalized distribution", title=f"{title} interval",
+                       colorcycle=colors, fr_cl=fr_cl, legend=True)
     for ii,_ in enumerate(canvas.axs):
         canvas.axs[ii].set_xscale('log')
     return canvas
@@ -138,5 +141,5 @@ def AmplitudeDistribution(canvas, clusters,framerate,colorSTR, title="Distributi
     bins=np.arange(0,5000,100)
     canvas=PlotHistFigure(canvas, spike_amp_cl, bins, framerate, xlabel="Amplitude (a.u.)",
                    ylabel="Normalized distribution", title="{title} of spike amplitude",
-                   colorcycle=colors, fr_cl=fr_cl)
+                   colorcycle=colors, fr_cl=fr_cl, legend=True)
     return canvas

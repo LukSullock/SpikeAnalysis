@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QMenu,
                         QLabel, QLineEdit, QMenuBar, QPushButton, QAction,
                         QSizePolicy, QSpacerItem, QSpinBox, QTabWidget,
                         QWidget, QApplication,QMainWindow, QDoubleSpinBox,
-                        QScrollArea, QFrame)
+                        QScrollArea, QFrame, QStatusBar, QProgressBar)
 
 class CheckableComboBox(QComboBox):
     def __init__(self):
@@ -106,6 +106,14 @@ class Ui_MainWindow(object):
 #Actions
         self.actionOpen_file = QAction(MainWindow)
         self.actionOpen_file.setObjectName(u"actionOpen_file")
+        self.actionLivePlot = QAction(MainWindow)
+        self.actionLivePlot.setObjectName(u"actionLivePlot")
+        self.actionLivePlot.setCheckable(True)
+        self.actionFilters = QAction(MainWindow)
+        self.actionFilters.setObjectName(u"actionFilters")
+        self.actionOpen_file.setEnabled(False)
+        self.actionLivePlot.setEnabled(False)
+        self.actionFilters.setEnabled(False)
 #Buttons
         self.bt_closeplots = QPushButton(self.centralwidget)
         self.bt_closeplots.setObjectName(u"bt_closeplots")
@@ -168,6 +176,8 @@ class Ui_MainWindow(object):
         self.le_timeinterval = QLineEdit(self.centralwidget)
         self.le_timeinterval.setObjectName(u"le_timeinterval")
         self.le_timeinterval.setMinimumSize(QSize(240, 0))
+#Progressbar
+        self.progressBar = QProgressBar()
 #Scroll area
         self.scroll_markers =QScrollArea(self.centralwidget)
         self.scroll_markers.setObjectName(u"scroll_markers")
@@ -186,7 +196,7 @@ class Ui_MainWindow(object):
         self.sb_refractair.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedKingdom))
         self.sb_refractair.setDecimals(4)
         self.sb_refractair.setSingleStep(0.001)
-        self.sb_refractair.setValue(0.005)
+        self.sb_refractair.setValue(0.001)
         self.sb_refractair.setMinimum(0.0001)
 #Tab widget
         self.plt_container = QTabWidget(self.centralwidget)
@@ -239,7 +249,13 @@ class Ui_MainWindow(object):
         self.menuMenu.setObjectName(u"menuMenu")
         MainWindow.setMenuBar(self.menubar)
         self.menubar.addAction(self.menuMenu.menuAction())
+        self.menuMenu.addAction(self.actionFilters)
         self.menuMenu.addAction(self.actionOpen_file)
+        self.menuMenu.addSeparator()
+        self.menuMenu.addAction(self.actionLivePlot)
+        self.statusBar = QStatusBar()
+        self.setStatusBar(self.statusBar)
+        self.statusBar.addPermanentWidget(self.progressBar)
 
         self.retranslateUi(MainWindow)
         self.bt_quit.clicked.connect(MainWindow.close)
@@ -285,6 +301,8 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
         self.actionOpen_file.setText(QCoreApplication.translate("MainWindow", u"Open file...", None))
+        self.actionLivePlot.setText(QCoreApplication.translate("MainWindow", u"Plot selections live", None))
+        self.actionFilters.setText(QCoreApplication.translate("MainWindow", u"Set filters", None))
     # retranslateUi
         self.plt_container.setTabsClosable(True)
         self.scroll_markers.setFrameShape(QFrame.NoFrame)

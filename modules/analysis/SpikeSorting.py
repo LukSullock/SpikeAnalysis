@@ -39,10 +39,12 @@ def OpenRecording(folder, filename):
     markername =f"{filename[:-4]}-events.txt"
     markerfile=os.path.join(folder, markername)
     rec = sp.io.wavfile.read(file)
+    nomarker=False
     try:
         with open(markerfile, encoding="utf8") as csvfile:
             markersCSV=np.genfromtxt(csvfile, delimiter=',')
     except FileNotFoundError:
+        nomarker=[traceback.format_exc()]
         markersCSV=[]
     
     #setup data from import .wav file
@@ -58,7 +60,7 @@ def OpenRecording(folder, filename):
     markers=defaultdict(list)
     for key in markersCSV:
         markers[key[0]].append(key[1])
-    return data,markers,time,framerate
+    return data,markers,time,framerate,nomarker
     
 def DataSelect(data,markers,framerate,times):
     #Create a selection of the data, if no input was given, default to time frame between first and last 0.5 seconds,
