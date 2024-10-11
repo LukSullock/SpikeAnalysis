@@ -27,7 +27,7 @@ from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as Navigatio
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
-from modules.analysis.SpikeSorting import (OpenRecording, DataSelect, SpikeSorting,
+from modules.analysis.SpikeFunctions import (OpenRecording, DataSelect, SpikeSorting,
                                    SaveAll)
 from modules.plot.plotfunctions import (PlotWholeRecording, PlotPartial,
                                    SpikeDetection, AverageWaveForm,
@@ -62,10 +62,12 @@ def CreateCanvas(pltsize, pltext=False):
 
 def ViewWhole(self):
     file=str(self.comb_file.currentText())
-    if ".wav" not in str(self.comb_file.currentText()):
-        return
+    #if ".wav" not in str(self.comb_file.currentText()):
+    #    return
+    self.statusBar.showMessage('Importing')
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
     if nomarker: self.WarningMsg("No marker file found.")
+    self.statusBar.showMessage('Creating Whole Recording Plot')
     if len(self.data)+1!=self.ccb_channels.count():
         for ii in reversed(range(self.ccb_channels.count())):
             if ii!=0:
@@ -76,10 +78,12 @@ def ViewWhole(self):
     channels=[ii+1 for ii in range(channelc)]
     widget, canvas=CreateCanvas(len(self.data))
     canvas=PlotWholeRecording(canvas, self.data, self.markers, self.time, self.colorSTR, channels=channels, title=f"{file}: Whole")
+    self.InfoMsg("Plot Created.", f"Filename {str(self.comb_file.currentText())}")
     self.canvassen.append([canvas, "Whole", file])
     self.canvasboxes.append(widget)
     self.plt_container.addTab(self.canvasboxes[-1], f"{file}: Whole recording (ch{channels})")
     self.canvassen[-1][0].draw()
+    self.statusBar.showMessage('Finished')
 
 def addcanvas(self, widget, canvas, title, tab, file):
     self.canvassen.append([canvas, title, file])
@@ -180,14 +184,14 @@ def RunSorting(self):
     if self.cb_interspikeinterval.isChecked():
         self.statusBar.showMessage('Inter Spike Interval')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=InterSpikeInterval(canvas, self.clusters,self.framerate,self.colorSTR)
+        canvas=InterSpikeInterval(canvas, self.clusters,self.framerate,self.colorSTR, channels=channels)
         addcanvas(self, widget, canvas, "ISI", f"{file}: Interspike interval (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     if self.cb_amplitudedistribution.isChecked():
         self.statusBar.showMessage('Amplitude Distribution')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=AmplitudeDistribution(canvas, self.clusters,self.framerate,self.colorSTR)
+        canvas=AmplitudeDistribution(canvas, self.clusters,self.framerate,self.colorSTR, channels=channels)
         addcanvas(self, widget, canvas, "AmpDis", f"{file}: Amplitude distribution (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
@@ -256,15 +260,59 @@ def IntervalChange(self):
         if "Whole" in self.canvassen[ii][1]:
             ncnvs=ii
             break
-    for inter in self.intervals:
-        inter.remove()
+    for interval in self.intervals:
+        interval.remove()
     self.intervals=[]
+    if ncnvs==-1: return
     times=str(self.le_timeinterval.text())
     times=times.split(" and ")
     for ii,art in enumerate(times):
         times[ii]=art.split(" to ")
     self.canvassen[ncnvs][0].draw_idle()
     if not all([all(interval) for interval in times]) or any([len(interval)<2 for interval in times]) or not self.canvassen: return
+    for ii,th in enumerate(times):
+        for jj,art in enumerate(th):
+            #If marker then use maker time, otherwise convert string to float
+            if "m" in art or "M" in art:
+                if len(art)==1: return
+                try:
+                    times[ii][jj]=self.markers[int(times[ii][jj][-1])][0]
+                except (IndexError, ValueError):
+                    return
+            else:
+                try:
+                    times[ii][jj]=float(times[ii][jj])
+                except ValueError:
+                    return
+    start_time=[art[0] for art in times]
+    stop_time=[art[1] for art in times]
+    if not start_time: return
+    for ii,axs in enumerate(self.canvassen[ncnvs][0].axs):
+        ylim=self.canvassen[ncnvs][0].axs[ii].get_ylim()
+        xlim=self.canvassen[ncnvs][0].axs[ii].get_xlim()
+        self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
+            (0,ylim[0]), start_time[0], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
+        for jj,start in enumerate(start_time):
+            if jj==0: continue
+            self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
+                (stop_time[jj-1],ylim[0]), start-stop_time[jj-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
+        self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
+            (stop_time[-1],ylim[0]), xlim[1]-stop_time[-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
+    self.canvassen[ncnvs][0].draw_idle()
+    
+def SavePlots(self):
+    #Get data, save everything, then close all plots
+    self.closePlots()
+    self.cb_externalplot.setChecked(True)
+    ViewWhole(self)
+    ThresholdChange(self)
+    CutoffChange(self)
+    IntervalChange(self)
+    self.RunSorting(self)
+    SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh)
+    #plt.close('all')
+
+def gettimestamps(self, times):
     for ii,th in enumerate(times):
         for jj,art in enumerate(th):
             #If marker then use maker time, otherwise convert string to float
@@ -286,28 +334,4 @@ def IntervalChange(self):
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
     start_time=[art[0] for art in times]
     stop_time=[art[1] for art in times]
-    if ncnvs!=-1:
-        for ii,axs in enumerate(self.canvassen[ncnvs][0].axs):
-            ylim=self.canvassen[ncnvs][0].axs[ii].get_ylim()
-            xlim=self.canvassen[ncnvs][0].axs[ii].get_xlim()
-            self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                (0,ylim[0]), start_time[0], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
-            for jj,start in enumerate(start_time):
-                if jj==0: continue
-                self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                    (stop_time[jj-1],ylim[0]), start-stop_time[jj-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
-            self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
-                (stop_time[-1],ylim[0]), xlim[1]-stop_time[-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
-    self.canvassen[ncnvs][0].draw_idle()
-    
-def SavePlots(self):
-    #Get data, save everything, then close all plots
-    self.closePlots()
-    self.cb_externalplot.setChecked(True)
-    ViewWhole(self)
-    ThresholdChange(self)
-    CutoffChange(self)
-    IntervalChange(self)
-    self.RunSorting(self)
-    SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh)
-    #plt.close('all')
+    return start_time, stop_time

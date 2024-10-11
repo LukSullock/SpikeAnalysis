@@ -23,12 +23,12 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import TABLEAU_COLORS
 from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
 from modules.GUI.Ui_SpikeSorting import Ui_MainWindow
-from modules.GUI.GUIFunctions import (ViewWhole, RunSorting, ThresholdChange,
-                                      SavePlots, CutoffChange, IntervalChange)
+import modules.GUI.GUIFunctions as GUIFunctions
+from modules.GUI.GUIBatchMain import BatchWidget
 
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewWholefnc, ThrChangefnc,
-                 CutoffChangefnc, IntervalChangefnc):
+                 CutoffChangefnc, IntervalChangefnc, GetTimeStampsfnc):
         super(Main, self).__init__()
         self.setupUi(self)
         self.colorSTR=TABLEAU_COLORS
@@ -45,6 +45,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.ThresholdChange=ThrChangefnc
         self.CutoffChange=CutoffChangefnc
         self.IntervalChange=IntervalChangefnc
+        self.gettimestamps=GetTimeStampsfnc
         
         #Connect functions
         self.comb_file.activated.connect(self.CheckFiles)
@@ -67,12 +68,20 @@ class Main(QMainWindow, Ui_MainWindow):
         self.bt_closeplots.clicked.connect(self.closePlots)
         self.bt_file.clicked.connect(lambda: self.viewWhole(self))
         self.plt_container.tabCloseRequested.connect(lambda indx: self.closeTab(indx))
+        self.actionBatchana.triggered.connect(self.BatchWindow)
+    
+    
+    def BatchWindow(self):
+        try:
+           self.batchwidget=BatchWidget(self)
+        except:
+           return
+        self.batchwidget.show()
         
     def closeTab(self, indx):
         self.plt_container.removeTab(indx)
         self.canvassen.pop(indx)
         self.canvasboxes.pop(indx)
-        
     def closePlots(self):
         plt.close("all")
         self.canvassen=[]
@@ -90,7 +99,6 @@ class Main(QMainWindow, Ui_MainWindow):
                self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
             self.cb_selectall.setChecked(False)
         self.cb_selectall.stateChanged.connect(self.select_all)
-        
     def select_all(self):
         state=self.cb_selectall.isChecked()
         self.cb_rawrecording.setChecked(state)
@@ -105,7 +113,8 @@ class Main(QMainWindow, Ui_MainWindow):
         files=os.listdir("data")
         for ii in reversed(range(len(files))):
             if ".wav" not in files[ii]:
-                del files[ii]
+                if ".mat" not in files[ii]: ####temporary
+                    del files[ii]
         #First disconnect function to be able to update combobox list, then reconnect function
         self.comb_file.activated.disconnect(self.CheckFiles)
         if len(files)+1!=self.comb_file.count():
@@ -121,7 +130,6 @@ class Main(QMainWindow, Ui_MainWindow):
                 self.viewWhole(self)
         self.OutputNameChange()
         self.comb_file.activated.connect(self.CheckFiles)
-        
     def OutputNameChange(self):
         if ".wav" not in str(self.comb_file.currentText()):
             self.le_outputname.setText("")
@@ -156,6 +164,13 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.setWindowTitle("Warning")
         reply=msg.exec_()
         return reply
+    def InfoMsg(self, text, subtext=""):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText(text)
+        msg.setInformativeText(subtext)
+        msg.setWindowTitle("Information")
+        msg.exec_()
         
     def closeEvent(self, event):
         plt.close("all")
@@ -164,9 +179,10 @@ class Main(QMainWindow, Ui_MainWindow):
 def start():
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
-    ui = Main(RunSortingfnc=RunSorting, SavePlotsfnc=SavePlots,
-              ViewWholefnc=ViewWhole, ThrChangefnc=ThresholdChange,
-              CutoffChangefnc=CutoffChange, IntervalChangefnc=IntervalChange)
+    ui = Main(RunSortingfnc=GUIFunctions.RunSorting, SavePlotsfnc=GUIFunctions.SavePlots,
+              ViewWholefnc=GUIFunctions.ViewWhole, ThrChangefnc=GUIFunctions.ThresholdChange,
+              CutoffChangefnc=GUIFunctions.CutoffChange, IntervalChangefnc=GUIFunctions.IntervalChange,
+              GetTimeStampsfnc=GUIFunctions.gettimestamps)
     ui.show()
     sys.exit(app.exec())
         

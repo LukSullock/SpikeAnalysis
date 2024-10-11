@@ -38,7 +38,11 @@ def OpenRecording(folder, filename):
     file = os.path.join(folder, filename)
     markername =f"{filename[:-4]}-events.txt"
     markerfile=os.path.join(folder, markername)
-    rec = sp.io.wavfile.read(file)
+    if ".mat" in filename:     #####temporary
+        mat = sp.io.loadmat(file)
+        rec=[500,mat["data"]]
+    else:
+        rec = sp.io.wavfile.read(file)
     nomarker=False
     try:
         with open(markerfile, encoding="utf8") as csvfile:
@@ -50,9 +54,9 @@ def OpenRecording(folder, filename):
     #setup data from import .wav file
     framerate = rec[0]
     if np.int16==type(rec[1][0]): #when single channel recording
-        data=[[point for point in rec[1]] for _ in range(1)]
+        data=[[int(point) for point in rec[1]] for _ in range(1)]
     else: #with more than 1 channel recording
-        data=[[point[chan-1] for point in rec[1]] for chan in range(len(rec[1][0]))]
+        data=[[int(point[chan-1]) for point in rec[1]] for chan in range(len(rec[1][0]))]
     nframes = len(data[0])
     time = [x/framerate for x in np.arange(nframes)] # in seconds
 

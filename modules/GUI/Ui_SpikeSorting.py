@@ -106,6 +106,8 @@ class Ui_MainWindow(object):
 #Actions
         self.actionOpen_file = QAction(MainWindow)
         self.actionOpen_file.setObjectName(u"actionOpen_file")
+        self.actionBatchana = QAction(MainWindow)
+        self.actionBatchana.setObjectName(u"actionBatchana")
         self.actionLivePlot = QAction(MainWindow)
         self.actionLivePlot.setObjectName(u"actionLivePlot")
         self.actionLivePlot.setCheckable(True)
@@ -249,8 +251,9 @@ class Ui_MainWindow(object):
         self.menuMenu.setObjectName(u"menuMenu")
         MainWindow.setMenuBar(self.menubar)
         self.menubar.addAction(self.menuMenu.menuAction())
-        self.menuMenu.addAction(self.actionFilters)
         self.menuMenu.addAction(self.actionOpen_file)
+        self.menuMenu.addAction(self.actionFilters)
+        self.menuMenu.addAction(self.actionBatchana)
         self.menuMenu.addSeparator()
         self.menuMenu.addAction(self.actionLivePlot)
         self.statusBar = QStatusBar()
@@ -301,6 +304,7 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
         self.actionOpen_file.setText(QCoreApplication.translate("MainWindow", u"Open file...", None))
+        self.actionBatchana.setText(QCoreApplication.translate("MainWindow", u"Batch analysis", None))
         self.actionLivePlot.setText(QCoreApplication.translate("MainWindow", u"Plot selections live", None))
         self.actionFilters.setText(QCoreApplication.translate("MainWindow", u"Set filters", None))
     # retranslateUi
