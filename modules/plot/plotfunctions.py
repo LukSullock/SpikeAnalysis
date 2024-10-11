@@ -113,7 +113,7 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[
                 text=[]
             elif not len(cl[1])<3:
                 text=[f"Not enough data\nGot {len(cl[1][1:-1])} datapoints\nAtleast 3 are required (first and last are skipped)"]
-            canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (s)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"{title} waveforms (ch{channels}) {cl[3]}")
+            canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (ms)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"{title} waveforms (ch{channels}) {cl[3]}")
             clus.append(f"Average waveforms ch{ii+1} {cl[3]}")
             n_cnv+=1
     return canvasses, clus
