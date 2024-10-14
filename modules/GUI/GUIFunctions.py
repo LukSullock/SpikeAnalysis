@@ -21,7 +21,7 @@ import os
 import itertools
 import re
 import traceback
-from matplotlib import pyplot as plt
+import matplotlib.pyplot as plt
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure

@@ -50,16 +50,14 @@ def OpenRecording(folder, filename):
     except FileNotFoundError:
         nomarker=[traceback.format_exc()]
         markersCSV=[]
-    
     #setup data from import .wav file
     framerate = rec[0]
     if np.int16==type(rec[1][0]): #when single channel recording
-        data=[[int(point) for point in rec[1]] for _ in range(1)]
+        data=np.vstack([int(point) for point in rec[1]])
     else: #with more than 1 channel recording
-        data=[[int(point[chan-1]) for point in rec[1]] for chan in range(len(rec[1][0]))]
-    nframes = len(data[0])
-    time = [x/framerate for x in np.arange(nframes)] # in seconds
-
+        data=np.vstack([np.array([int(point[chan-1]) for point in rec[1]]) for chan in range(len(rec[1][0]))])
+    nframes = np.size(data, 1)
+    time = np.array([x/framerate for x in np.arange(nframes)]) # in seconds
     #setup marker list
     markers=defaultdict(list)
     for key in markersCSV:
@@ -67,18 +65,21 @@ def OpenRecording(folder, filename):
     return data,markers,time,framerate,nomarker
     
 def DataSelect(data,markers,framerate,times):
-    #Create a selection of the data, if no input was given, default to time frame between first and last 0.5 seconds,
-    #time before chosen time frame needs to be longer than what min_val is assigned in SpikeSorterFunctions.AverageWaveForm, time after needs to be longer than max_val
+    """
+    Create a selection of the data, if no input was given,
+    default to whole recording.
+    """
+    #Get time frames
     times=times.split(" and ")
     for ii,art in enumerate(times):
         times[ii]=art.split(" to ")
-    #If there is no given range, default to whole recording (without starting and ending 0.5 seconds)
+    #If there is no given range, default to whole recording
     if not len(times[0][0]):
-        times=[["0.5", f"{len(data[0])/framerate-0.5}"]]
+        times=[["0", f"{len(data[0])}"]]
     #Get the time stamps of markers when they are used
     for ii,th in enumerate(times):
         for jj,art in enumerate(th):
-            #If marker then use maker time, otherwise convert string to float
+            #If a marker was given then use maker time, otherwise convert string to float.
             if "m" in art or "M" in art:
                 try:
                     times[ii][jj]=markers[int(times[ii][jj][-1])][0]
@@ -91,14 +92,15 @@ def DataSelect(data,markers,framerate,times):
                     times[ii][jj]=float(times[ii][jj])
                 except ValueError as err:
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
-    
+    #Create lists for start and stop times
     start_time=[art[0] for art in times]
     stop_time=[art[1] for art in times]
-    
     #Create selection of data
-    DataSelection = [[np.nan]*len(chan) for chan in data]
+    DataSelection = np.empty((len(data),len(data[0])))
+    DataSelection[:]=np.nan
     for ii in range(len(start_time)):
         for chan in range(len(DataSelection)):
+            #Copy the data of the selected time windows from whole data variable to the dataselection variable
             DataSelection[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]=data[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]
     return [start_time,stop_time],DataSelection
 
@@ -119,21 +121,23 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
     cl2=[[] for _ in range(len(DataSelection))]
     maxval=[[] for _ in range(len(DataSelection))]
     #clusters: [[peak data], [time], [plot height of points], ["Cluster threshold {threshold}"]
-    clusters=[[[[],[],[],f"Cluster threshold {th}"] for ii,th in enumerate(thresholds)] for _ in range(len(DataSelection))]
+    clusters=[[[[],[],[],[],f"Cluster threshold {th}"] for ii,th in enumerate(thresholds)] for _ in range(len(DataSelection))]
     #Get largest peak of selected data
     for ii in range(len(DataSelection)):
         cl2[ii]=sp.signal.find_peaks(DataSelection[ii], height=0, distance=distance*framerate)[1]["peak_heights"]
+        if cl2[ii].all(): continue
         maxvalN=np.argmax(cl2[ii])
         maxval[ii]=cl2[ii][maxvalN]
-
         # Then, detect the other spikes per cluster, 'Cluster #'
         for clusterN,th in enumerate(thresholds):
             clusters[ii][clusterN][0] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
             for peakN,x in enumerate(clusters[ii][clusterN][0][0]):
                 if x not in cutoff1[ii][0] and not any(x in clusters[ii][jj][0][0] for jj in range(clusterN)):
-                    clusters[ii][clusterN][1].append(x/framerate) #+start_time[0]
+                    clusters[ii][clusterN][1].append(x/framerate)
+                    clusters[ii][clusterN][2].append(clusters[ii][clusterN][0][1]["peak_heights"][peakN])
+            clusters[ii][clusterN][1]=np.array(clusters[ii][clusterN][1])
             #y value for points denothing peaks above largest peak
-            clusters[ii][clusterN][2] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
+            clusters[ii][clusterN][3] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
 def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
@@ -143,7 +147,7 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
     #NOTE: there is no check for duplicate file names, old files will be overridden
     for jj,chan in enumerate(clusters):
         for ii,cl in enumerate(chan):
-            oridf=pd.DataFrame({cl[3]: cl[1]})
+            oridf=pd.DataFrame({cl[4]: cl[1]})
             adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
             meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
             meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
@@ -152,7 +156,8 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
             df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{jj+1}_cluster{ii+1}.csv'),index=False)
     p=PdfPages(os.path.join(folder,f"Plots_{output}.pdf"))
     figs=[plt.figure(n) for n in plt.get_fignums()]
-    [fig.savefig(p, format='pdf') for fig in figs]
+    if figs:
+        [fig.savefig(p, format='pdf') for fig in figs]
     p.close()
 
 
