@@ -28,7 +28,7 @@ from modules.GUI.GUIBatchMain import BatchWidget
 
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewWholefnc, ThrChangefnc,
-                 CutoffChangefnc, IntervalChangefnc, GetTimeStampsfnc):
+                 CutoffChangefnc, IntervalChangefnc, GetTimeStampsfnc, UpdateWholePlotfnc):
         super(Main, self).__init__()
         self.setupUi(self)
         self.colorSTR=TABLEAU_COLORS
@@ -46,6 +46,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.CutoffChange=CutoffChangefnc
         self.IntervalChange=IntervalChangefnc
         self.gettimestamps=GetTimeStampsfnc
+        self.UpdateWholePlot=UpdateWholePlotfnc
         
         #Connect functions
         self.comb_file.activated.connect(self.CheckFiles)
@@ -57,18 +58,16 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_averagewaveform.stateChanged.connect(self.deselect_select_all)
         self.cb_interspikeinterval.stateChanged.connect(self.deselect_select_all)
         self.cb_amplitudedistribution.stateChanged.connect(self.deselect_select_all)
-        self.cb_cutoff.stateChanged.connect(lambda: self.CutoffChange(self))
-        self.sb_cutoff.valueChanged.connect(lambda: self.CutoffChange(self))
         self.ccb_channels.currentTextChanged.connect(self.OutputNameChange)
         self.le_condition.textEdited.connect(self.OutputNameChange)
-        self.le_timeinterval.textEdited.connect(lambda: self.IntervalChange(self))
-        self.le_thresholds.textEdited.connect(lambda: self.ThresholdChange(self))
         self.bt_go.clicked.connect(lambda: self.RunSorting(self))
         self.bt_saveall.clicked.connect(lambda: self.SavePlots(self))
         self.bt_closeplots.clicked.connect(self.closePlots)
         self.bt_file.clicked.connect(lambda: self.viewWhole(self))
         self.plt_container.tabCloseRequested.connect(lambda indx: self.closeTab(indx))
         self.actionBatchana.triggered.connect(self.BatchWindow)
+        self.bt_setsettings.clicked.connect(lambda: self.UpdateWholePlot(self))
+        self.actionLivePlot.triggered.connect(self.LiveUpdate)
     
     
     def BatchWindow(self):
@@ -87,6 +86,18 @@ class Main(QMainWindow, Ui_MainWindow):
         self.canvassen=[]
         self.canvasboxes=[]
         self.plt_container.clear()
+    
+    def LiveUpdate(self):
+        if self.actionLivePlot.isChecked():
+            self.le_timeinterval.editingFinished.connect(lambda: self.IntervalChange(self))
+            self.le_thresholds.editingFinished.connect(lambda: self.ThresholdChange(self))
+            self.cb_cutoff.stateChanged.connect(lambda: self.CutoffChange(self))
+            self.sb_cutoff.valueChanged.connect(lambda: self.CutoffChange(self))
+        else:
+            self.le_timeinterval.editingFinished.disconnect()
+            self.le_thresholds.editingFinished.disconnect()
+            self.cb_cutoff.stateChanged.disconnect()
+            self.sb_cutoff.valueChanged.disconnect()
     
     def deselect_select_all(self):
         self.cb_selectall.stateChanged.disconnect(self.select_all)
@@ -182,7 +193,7 @@ def start():
     ui = Main(RunSortingfnc=GUIFunctions.RunSorting, SavePlotsfnc=GUIFunctions.SavePlots,
               ViewWholefnc=GUIFunctions.ViewWhole, ThrChangefnc=GUIFunctions.ThresholdChange,
               CutoffChangefnc=GUIFunctions.CutoffChange, IntervalChangefnc=GUIFunctions.IntervalChange,
-              GetTimeStampsfnc=GUIFunctions.gettimestamps)
+              GetTimeStampsfnc=GUIFunctions.gettimestamps, UpdateWholePlotfnc=GUIFunctions.UpdateWholePlot)
     ui.show()
     sys.exit(app.exec())
         

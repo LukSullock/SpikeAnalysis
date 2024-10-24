@@ -18,6 +18,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import itertools
+import math
 import numpy as np
 
 def PlotDataFigure(canvas, data, time, xlabel="", ylabel="", color="k", *, legend=False, xlim=False, lw=1, curves=[], vlines=[],hlines=[], scatterpoints=[], colorcycle=itertools.cycle("rbymgc"), title="", text=[]):
@@ -131,7 +132,9 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR, *, channels=[1], tit
     #average interspike interval, only used to check if there was enough data
     isispike_times=[[[np.diff(cl[0]),cl[1]] for cl in chan] for chan in spike_times]
     #Create bins and weights
-    bins=np.logspace(np.log10(1),np.log10(20000),int(20000/400)) #20000 is 20 seconds
+    maxval=[[max(cl[0]) for cl in chan] for chan in isispike_times]
+    maxval=int(math.ceil(max(sum(maxval, []))/100))*100
+    bins=np.logspace(np.log10(1),np.log10(20000),50) #20000 is 20 seconds
     weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in isispike_times]
     canvas=PlotHistFigure(canvas, isispike_times, bins, weights, framerate, xlabel="Interspike interval (ms)",
                        ylabel="Normalized distribution", title=f"{title} interval (ch{channels})",
@@ -140,12 +143,16 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR, *, channels=[1], tit
         canvas.axs[ii].set_xscale('log')
     return canvas
 
-def AmplitudeDistribution(canvas, clusters,framerate,colorSTR, *, channels=[1], title="Distribution"):
+def AmplitudeDistribution(canvas, clusters, framerate, colorSTR, *, channels=[1], title="Distribution"):
     colors=itertools.cycle(colorSTR)
     #Extract peak heights
     spike_amp_cl = [[[cl[2], cl[4]] for cl in chan] for chan in clusters] # spike amplitude in arbitrary units (a.u.)
     #Create bins and weights
-    bins=np.arange(0,5000,100)
+    maxval=[[max(cl[0]) for cl in chan] for chan in spike_amp_cl]
+    maxval=int(math.ceil(max(sum(maxval, []))/100))*100
+    minval=[[min(cl[0]) for cl in chan] for chan in spike_amp_cl]
+    minval=int(math.floor(min(sum(minval, []))/100))*100
+    bins=np.arange(minval,maxval,(maxval-minval)/40)
     weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in spike_amp_cl]
     #Create histogram
     canvas=PlotHistFigure(canvas, spike_amp_cl, bins, weights, framerate, xlabel="Amplitude (a.u.)",

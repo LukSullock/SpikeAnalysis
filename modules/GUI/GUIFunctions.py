@@ -60,6 +60,15 @@ def CreateCanvas(pltsize, pltext=False):
         widget.setLayout(box)
     return widget, canvas
 
+def addcanvas(self, widget, canvas, title, tab, file):
+    self.canvassen.append([canvas, title, file])
+    if widget:
+        self.canvasboxes.append(widget)
+        self.plt_container.addTab(self.canvasboxes[-1], tab)
+        self.canvassen[-1][0].draw()
+    else:
+        canvas.fig.show()
+
 def ViewWhole(self):
     file=str(self.comb_file.currentText())
     #if ".wav" not in str(self.comb_file.currentText()):
@@ -84,16 +93,7 @@ def ViewWhole(self):
     self.plt_container.addTab(self.canvasboxes[-1], f"{file}: Whole recording (ch{channels})")
     self.canvassen[-1][0].draw()
     self.statusBar.showMessage('Finished')
-
-def addcanvas(self, widget, canvas, title, tab, file):
-    self.canvassen.append([canvas, title, file])
-    if widget:
-        self.canvasboxes.append(widget)
-        self.plt_container.addTab(self.canvasboxes[-1], tab)
-        self.canvassen[-1][0].draw()
-    else:
-        canvas.fig.show()
-
+    
 def RunSorting(self):
     file=str(self.comb_file.currentText())
     if file=="Select file":
@@ -130,9 +130,9 @@ def RunSorting(self):
     #Run all checked options, and necessary functions for variables
     #If cutoff has been selected, take value, otherwise set to false
     if self.cb_cutoff.isChecked():
-        self.cutoff_thresh=int(self.sb_cutoff.text())
+        self.cutoff_thresh=self.sb_cutoff.value()
     else:
-        self.cutoff_thresh=False #functions need the variable assigned to either False or a number to be able to function
+        self.cutoff_thresh=[] #functions need the variable assigned to either False or a number to be able to function
     #Raw recording
     if self.cb_rawrecording.isChecked():
         self.statusBar.showMessage('Raw Recording')
@@ -163,7 +163,7 @@ def RunSorting(self):
     if self.cb_spikesorting.isChecked():
         self.statusBar.showMessage('Spike Detection')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim,self.colorSTR, channels=channels, title=f"{file}: Spike")
+        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim, self.colorSTR, [self.cutoff_thresh], channels=channels, title=f"{file}: Spike")
         addcanvas(self, widget, canvas, "Spike", f"{file}: Spike sorting (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
@@ -299,7 +299,12 @@ def IntervalChange(self):
         self.intervals.append(self.canvassen[ncnvs][0].axs[ii].add_patch(Rectangle(
             (stop_time[-1],ylim[0]), xlim[1]-stop_time[-1], abs(ylim[0])+abs(ylim[1]), color=(1,0,0,0.3))))
     self.canvassen[ncnvs][0].draw_idle()
-    
+
+def UpdateWholePlot(self):
+    ThresholdChange(self)
+    CutoffChange(self)
+    IntervalChange(self)
+
 def SavePlots(self):
     #Get data, save everything, then close all plots
     self.closePlots()

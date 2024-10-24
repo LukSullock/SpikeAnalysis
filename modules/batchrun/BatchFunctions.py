@@ -4,6 +4,7 @@ Created on Fri Oct 11 10:52:33 2024
 
 @author: LukSu
 """
+
 def toggleedit(parent, state):
     parent.comb_file.setDisabled(state)
     parent.ccb_channels.setDisabled(state)
@@ -26,7 +27,7 @@ def RunBatch(self, parent):
     #check if everything needed is filled in
     channels=self.checks(parent)
     if not channels:
-        return
+        return #Error message is ran in self.checks
     #Prevent the mainwindow variables from being edited
     toggleedit(parent, True)
     #Set all the mainwindow variables to the batch values
@@ -39,8 +40,7 @@ def RunBatch(self, parent):
         if self.le_thresholds[ii].text()[0]=="[" and self.le_thresholds[ii].text()[-1]=="]":
             thtext=self.le_thresholds[ii].text()[1:-1].split(";")
         else:
-            thtext=self.le_thresholds[ii].text()
-        #parent.le_thresholds.setText(self.le_thresholds[ii].text())
+            thtext=[self.le_thresholds[ii].text()]
         parent.cb_cutoff.setChecked(self.cb_cutoffs[ii].isChecked())
         parent.sb_cutoff.setValue(self.sb_cutoffs[ii].value())
         parent.le_timeinterval.setText(chtime[1])

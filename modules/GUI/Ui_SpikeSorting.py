@@ -51,7 +51,6 @@ class CheckableComboBox(QComboBox):
                     self.showPopup()
                 return True
             if event.type()==QEvent.Type.Scroll:
-                print(2)
                 return True
             return super().eventFilter(widget, event)
         if widget==self.view().viewport():
@@ -114,7 +113,6 @@ class Ui_MainWindow(object):
         self.actionFilters = QAction(MainWindow)
         self.actionFilters.setObjectName(u"actionFilters")
         self.actionOpen_file.setEnabled(False)
-        self.actionLivePlot.setEnabled(False)
         self.actionFilters.setEnabled(False)
 #Buttons
         self.bt_closeplots = QPushButton(self.centralwidget)
@@ -127,6 +125,9 @@ class Ui_MainWindow(object):
         self.bt_quit.setObjectName(u"bt_quit")
         self.bt_saveall = QPushButton(self.centralwidget)
         self.bt_saveall.setObjectName(u"bt_saveall")
+        self.bt_setsettings = QPushButton(self.centralwidget)
+        self.bt_setsettings.setObjectName(u"bt_saveall")
+        self.bt_setsettings.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
 #Checkable comboboxes
         self.ccb_channels = CheckableComboBox()
         self.ccb_channels.setObjectName(u"ccb_channels")
@@ -204,7 +205,7 @@ class Ui_MainWindow(object):
         self.plt_container = QTabWidget(self.centralwidget)
         self.plt_container.setObjectName(u"plt_container")
 #Add to grid layout
-        self.gridLayout.addWidget(self.plt_container, 0, 0, 13, 4)
+        self.gridLayout.addWidget(self.plt_container, 0, 0, 13, 5)
         self.gridLayout.addWidget(self.lbl_file, 13, 0, 1, 1)
         self.gridLayout.addWidget(self.ccb_channels, 14, 0, 1, 2)
         self.gridLayout.addWidget(self.lbl_condition, 15, 0, 1, 1)
@@ -223,25 +224,27 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.le_timeinterval, 20, 1, 1, 1)
         
         self.gridLayout.addWidget(self.bt_file, 13, 2, 1, 1)
-        self.gridLayout.addWidget(self.scroll_markers, 18, 2, 3, 2)
+        self.gridLayout.addWidget(self.bt_setsettings, 18, 2, 3, 1)
+        
+        self.gridLayout.addWidget(self.scroll_markers, 18, 3, 3, 2)
         self.scroll_markers.setWidget(self.lbl_markers)
         
-        self.gridLayout.addItem(self.horizontalSpacer_2, 13, 3, 1, 1)
+        self.gridLayout.addItem(self.horizontalSpacer_2, 13, 4, 1, 1)
         
-        self.gridLayout.addWidget(self.cb_selectall, 0, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_rawrecording, 1, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_selectedframes, 2, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_spikesorting, 3, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_averagewaveform, 4, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_interspikeinterval, 5, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_amplitudedistribution, 6, 4, 1, 1)
-        self.gridLayout.addItem(self.verticalSpacer_3, 7, 4, 1, 1)
-        self.gridLayout.addWidget(self.cb_externalplot, 8, 4, 1, 1)
-        self.gridLayout.addWidget(self.bt_go, 9, 4, 1, 1)
-        self.gridLayout.addWidget(self.bt_closeplots, 10, 4, 1, 1)
-        self.gridLayout.addItem(self.verticalSpacer, 12, 4, 1, 1)
-        self.gridLayout.addWidget(self.bt_saveall, 13, 4, 1, 1)
-        self.gridLayout.addWidget(self.bt_quit, 20, 4, 1, 1)
+        self.gridLayout.addWidget(self.cb_selectall, 0, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_rawrecording, 1, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_selectedframes, 2, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_spikesorting, 3, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_averagewaveform, 4, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_interspikeinterval, 5, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_amplitudedistribution, 6, 5, 1, 1)
+        self.gridLayout.addItem(self.verticalSpacer_3, 7, 5, 1, 1)
+        self.gridLayout.addWidget(self.cb_externalplot, 8, 5, 1, 1)
+        self.gridLayout.addWidget(self.bt_go, 9, 5, 1, 1)
+        self.gridLayout.addWidget(self.bt_closeplots, 10, 5, 1, 1)
+        self.gridLayout.addItem(self.verticalSpacer, 12, 5, 1, 1)
+        self.gridLayout.addWidget(self.bt_saveall, 13, 5, 1, 1)
+        self.gridLayout.addWidget(self.bt_quit, 20, 5, 1, 1)
 #Add everything to mainwindow
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -300,6 +303,7 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.lbl_thresholds.setText(QCoreApplication.translate("MainWindow", u"Thresholds", None))
         self.cb_selectall.setText(QCoreApplication.translate("MainWindow", u"Select all", None))
         self.bt_saveall.setText(QCoreApplication.translate("MainWindow", u"Save selected data and plots", None))
+        self.bt_setsettings.setText(QCoreApplication.translate("MainWindow", u"Set thresholds and\ntime frames", None))
         self.bt_quit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
