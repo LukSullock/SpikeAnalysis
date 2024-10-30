@@ -54,6 +54,7 @@ def OpenRecording(folder, filename):
     framerate = rec[0]
     if np.int16==type(rec[1][0]): #when single channel recording
         data=np.vstack([int(point) for point in rec[1]])
+        data=np.array([data])
     else: #with more than 1 channel recording
         data=np.vstack([np.array([int(point[chan-1]) for point in rec[1]]) for chan in range(len(rec[1][0]))])
     nframes = np.size(data, 1)
@@ -116,7 +117,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
     if cutoff_thresh:
         for ii in range(len(DataSelection)):
             th = cutoff_thresh
-            cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
+            cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
         
     cl2=[[] for _ in range(len(DataSelection))]
     maxval=[[] for _ in range(len(DataSelection))]

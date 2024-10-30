@@ -132,15 +132,20 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR, *, channels=[1], tit
     #average interspike interval, only used to check if there was enough data
     isispike_times=[[[np.diff(cl[0]),cl[1]] for cl in chan] for chan in spike_times]
     #Create bins and weights
-    maxval=[[max(cl[0]) for cl in chan] for chan in isispike_times]
-    maxval=int(math.ceil(max(sum(maxval, []))/100))*100
-    bins=np.logspace(np.log10(1),np.log10(20000),50) #20000 is 20 seconds
-    weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in isispike_times]
-    canvas=PlotHistFigure(canvas, isispike_times, bins, weights, framerate, xlabel="Interspike interval (ms)",
-                       ylabel="Normalized distribution", title=f"{title} interval (ch{channels})",
-                       colorcycle=colors, legend=True)
-    for ii,_ in enumerate(canvas.axs):
-        canvas.axs[ii].set_xscale('log')
+    if any([any([any(cl[0]) for cl in chan]) for chan in isispike_times]):
+        maxval=[[max(cl[0]) for cl in chan] for chan in isispike_times]
+        maxval=int(math.ceil(max(sum(maxval, []))/100))*100
+        bins=np.logspace(np.log10(1),np.log10(maxval),50) #20000 is 20 seconds
+        weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in isispike_times]
+        canvas=PlotHistFigure(canvas, isispike_times, bins, weights, framerate, xlabel="Interspike interval (ms)",
+                           ylabel="Normalized distribution", title=f"{title} interval (ch{channels})",
+                           colorcycle=colors, legend=True)
+        for ii,_ in enumerate(canvas.axs):
+            canvas.axs[ii].set_xscale('log')
+    else:
+        canvas=PlotHistFigure(canvas, isispike_times, [], [], [], xlabel="Interspike interval (ms)",
+                           ylabel="Normalized distribution", title=f"{title} interval (ch{channels})",
+                           text="No data points", colorcycle=colors, legend=True)
     return canvas
 
 def AmplitudeDistribution(canvas, clusters, framerate, colorSTR, *, channels=[1], title="Distribution"):

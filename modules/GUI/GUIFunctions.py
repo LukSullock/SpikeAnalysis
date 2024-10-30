@@ -75,7 +75,11 @@ def ViewWhole(self):
     #    return
     self.statusBar.showMessage('Importing')
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
-    if nomarker: self.WarningMsg("No marker file found.")
+    if nomarker: self.WarningMsg("No marker file found.", """The marker file should be a txt file where the filename matches the filename of the audio file with -events after it.
+For example:
+    Audiofile: example.wav
+    Markerfile: example-events.txt
+Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
     self.statusBar.showMessage('Creating Whole Recording Plot')
     if len(self.data)+1!=self.ccb_channels.count():
         for ii in reversed(range(self.ccb_channels.count())):
@@ -121,7 +125,11 @@ def RunSorting(self):
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
     currprog+=1
     self.progressBar.setValue(int(currprog/maxprog*100))
-    if nomarker: self.WarningMsg("No marker file found.")
+    if nomarker: self.WarningMsg("No marker file found.", """The marker file should be a txt file where the filename matches the filename of the audio file with -events after it.
+For example:
+    Audiofile: example.wav
+    Markerfile: example-events.txt
+Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
     datasel=[self.data[chan-1] for chan in channels]
     #Apply filters if applicable
     #######
@@ -132,7 +140,7 @@ def RunSorting(self):
     if self.cb_cutoff.isChecked():
         self.cutoff_thresh=self.sb_cutoff.value()
     else:
-        self.cutoff_thresh=[] #functions need the variable assigned to either False or a number to be able to function
+        self.cutoff_thresh=None #functions need the variable assigned to either False or a number to be able to function
     #Raw recording
     if self.cb_rawrecording.isChecked():
         self.statusBar.showMessage('Raw Recording')

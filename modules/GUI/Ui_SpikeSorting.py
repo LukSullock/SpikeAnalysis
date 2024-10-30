@@ -192,7 +192,7 @@ class Ui_MainWindow(object):
 #Spinboxes
         self.sb_cutoff = QSpinBox(self.centralwidget)
         self.sb_cutoff.setObjectName(u"sb_cutoff")
-        self.sb_cutoff.setMaximum(999999999)
+        self.sb_cutoff.setMaximum(2147483647)
         self.sb_cutoff.setMinimum(1)
         self.sb_refractair = QDoubleSpinBox(self.centralwidget)
         self.sb_refractair.setObjectName(u"sb_refractair")
@@ -306,6 +306,9 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.bt_setsettings.setText(QCoreApplication.translate("MainWindow", u"Set thresholds and\ntime frames", None))
         self.bt_quit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
+#         self.sb_refractair.setToolTip(QCoreApplication.translate("MainWindow",
+# u"refractair in order of magnitude\n"
+# "Set it to the order of magnitude your peaks are in for best results.", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
         self.actionOpen_file.setText(QCoreApplication.translate("MainWindow", u"Open file...", None))
         self.actionBatchana.setText(QCoreApplication.translate("MainWindow", u"Batch analysis", None))

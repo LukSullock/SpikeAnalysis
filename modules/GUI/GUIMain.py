@@ -68,6 +68,9 @@ class Main(QMainWindow, Ui_MainWindow):
         self.actionBatchana.triggered.connect(self.BatchWindow)
         self.bt_setsettings.clicked.connect(lambda: self.UpdateWholePlot(self))
         self.actionLivePlot.triggered.connect(self.LiveUpdate)
+        self.le_timeinterval.returnPressed.connect(lambda: self.IntervalChange(self))
+        self.le_thresholds.returnPressed.connect(lambda: self.ThresholdChange(self))
+        self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
     
     
     def BatchWindow(self):
@@ -89,15 +92,21 @@ class Main(QMainWindow, Ui_MainWindow):
     
     def LiveUpdate(self):
         if self.actionLivePlot.isChecked():
-            self.le_timeinterval.editingFinished.connect(lambda: self.IntervalChange(self))
-            self.le_thresholds.editingFinished.connect(lambda: self.ThresholdChange(self))
-            self.cb_cutoff.stateChanged.connect(lambda: self.CutoffChange(self))
+            self.le_timeinterval.returnPressed.disconnect()
+            self.le_thresholds.returnPressed.disconnect()
+            self.sb_cutoff.lineEdit().returnPressed.disconnect()
+            self.le_timeinterval.textChanged.connect(lambda: self.IntervalChange(self))
+            self.le_thresholds.textChanged.connect(lambda: self.ThresholdChange(self))
             self.sb_cutoff.valueChanged.connect(lambda: self.CutoffChange(self))
+            self.cb_cutoff.stateChanged.connect(lambda: self.CutoffChange(self))
         else:
-            self.le_timeinterval.editingFinished.disconnect()
-            self.le_thresholds.editingFinished.disconnect()
-            self.cb_cutoff.stateChanged.disconnect()
+            self.le_timeinterval.textChanged.disconnect()
+            self.le_thresholds.textChanged.disconnect()
             self.sb_cutoff.valueChanged.disconnect()
+            self.cb_cutoff.stateChanged.disconnect()
+            self.le_timeinterval.returnPressed.connect(lambda: self.IntervalChange(self))
+            self.le_thresholds.returnPressed.connect(lambda: self.ThresholdChange(self))
+            self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
     
     def deselect_select_all(self):
         self.cb_selectall.stateChanged.disconnect(self.select_all)
