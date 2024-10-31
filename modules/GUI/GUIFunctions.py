@@ -138,9 +138,9 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     #Run all checked options, and necessary functions for variables
     #If cutoff has been selected, take value, otherwise set to false
     if self.cb_cutoff.isChecked():
-        self.cutoff_thresh=self.sb_cutoff.value()
+        self.cutoff_thresh=[self.sb_cutoff.value()]
     else:
-        self.cutoff_thresh=None #functions need the variable assigned to either False or a number to be able to function
+        self.cutoff_thresh=[] #functions need the variable assigned to either False or a number to be able to function
     #Raw recording
     if self.cb_rawrecording.isChecked():
         self.statusBar.showMessage('Raw Recording')
@@ -171,7 +171,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     if self.cb_spikesorting.isChecked():
         self.statusBar.showMessage('Spike Detection')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim, self.colorSTR, [self.cutoff_thresh], channels=channels, title=f"{file}: Spike")
+        canvas=SpikeDetection(canvas, self.clusters, self.time, self.DataSelection, self.xlim, self.colorSTR, self.cutoff_thresh, channels=channels, title=f"{file}: Spike")
         addcanvas(self, widget, canvas, "Spike", f"{file}: Spike sorting (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
