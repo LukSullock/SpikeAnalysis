@@ -53,7 +53,7 @@ def OpenRecording(folder, filename):
     #setup data from import .wav file
     framerate = rec[0]
     if np.int16==type(rec[1][0]): #when single channel recording
-        data=np.vstack([int(point) for point in rec[1]])
+        data=np.hstack([int(point) for point in rec[1]])
         data=np.array([data])
     else: #with more than 1 channel recording
         data=np.vstack([np.array([int(point[chan-1]) for point in rec[1]]) for chan in range(len(rec[1][0]))])

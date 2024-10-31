@@ -18,7 +18,10 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 from scipy.signal import find_peaks as fp
+from sklearn.decomposition import PCA
+from sklearn.preprocessing import StandardScaler
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import scipy as sp
 
@@ -65,14 +68,22 @@ def find_peaks(data, threshold=1, prominence=0):
         else:
             peakdata.pop(ii)
             print(f'Removed variable: {labels.pop(ii)}')
-    
-    return peaktimes, peakdata, labels
+    #PCA analysis
+    df=pd.DataFrame(peakdata, labels)
+    df=df.T
+    #df=StandardScaler().fit_transform(df)
+    pca=PCA(n_components=len(labels))
+    pcomp=pca.fit_transform(df)
+    princidf=pd.DataFrame(data=pcomp)
+    f=plt.subplot(2,2,3)
+    plt.scatter(princidf[0], princidf[1], c=princidf[2])
+    return peaktimes, peakdata, labels, df, princidf
 
 
 data=[]
-fr, rec = sp.io.wavfile.read("gabcis.wav")
+fr, rec = sp.io.wavfile.read("Strijder.wav")
 [data.append(ch[0]) for ch in rec]
-data=data[500:1000]
+data=data[0:100000]
 x1 = np.linspace(0, 100 * np.pi, num=2000)
 x2 = np.linspace(0, 30 * np.pi, num=2000)
 n = np.random.normal(scale=8, size=x1.size)
@@ -81,13 +92,13 @@ y = 100*np.sin(x1)+100*np.sin(x2)+ n
 signal = np.int16(y)
 signal=data
 #plt.scatter( px, py )
-f=plt.subplot(2,1,1)
+f=plt.subplot(2,2,1)
 plt.plot(signal)
 msigabs=np.mean(np.abs(signal))
 msig=np.mean(signal)
 print(msig)
 print(msigabs)
-(peaktimes,peaktimesextra), peakdata, labels=find_peaks(signal, threshold=1, prominence=0)
+(peaktimes,peaktimesextra), peakdata, labels, df, princidf=find_peaks(signal, threshold=1, prominence=0)
 prominences=peaktimesextra["prominences"]
 print(np.mean(prominences))
 print(np.std(prominences))
@@ -95,12 +106,14 @@ print(np.median(prominences))
 print(np.percentile(prominences, [75,25]))
 ymax=max(signal)*1.1
 ypeaks=[ymax]*len(peaktimes)
+f=plt.subplot(2,2,1)
 plt.vlines(peaktimes, ymin=0, ymax=ypeaks, colors="r")
-f=plt.subplot(2,1,2)
-(peaktimes2,peaktimesextra2), peakdata, labels=find_peaks(signal, threshold=1, prominence=np.mean(prominences))
+#(peaktimes2,peaktimesextra2), peakdata, labels, df, princidf=find_peaks(signal, threshold=1, prominence=np.mean(prominences))
+f=plt.subplot(2,2,2)
 plt.plot(signal)
-ypeaks=[ymax]*len(peaktimes2)
-plt.vlines(peaktimes2, ymin=0, ymax=ypeaks, colors="r")
+#ypeaks=[ymax]*len(peaktimes2)
+#f=plt.subplot(2,2,2)
+#plt.vlines(peaktimes2, ymin=0, ymax=ypeaks, colors="r")
 
 
 # =============================================================================
