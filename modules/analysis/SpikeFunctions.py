@@ -94,8 +94,11 @@ def DataSelect(data,markers,framerate,times):
                 except ValueError as err:
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
     #Create lists for start and stop times
-    start_time=[art[0] for art in times]
-    stop_time=[art[1] for art in times]
+    try:
+        start_time=[art[0] for art in times]
+        stop_time=[art[1] for art in times]
+    except IndexError:
+        return False, False
     #Create selection of data
     DataSelection = np.empty((len(data),len(data[0])))
     DataSelection[:]=np.nan
@@ -116,7 +119,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
     cutoff1=[[[]] for _ in range(len(DataSelection))]
     if cutoff_thresh:
         for ii in range(len(DataSelection)):
-            th = cutoff_thresh
+            th = cutoff_thresh[0]
             cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
         
     cl2=[[] for _ in range(len(DataSelection))]

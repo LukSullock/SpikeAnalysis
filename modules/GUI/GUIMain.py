@@ -49,8 +49,10 @@ class Main(QMainWindow, Ui_MainWindow):
         self.UpdateWholePlot=UpdateWholePlotfnc
         
         #Connect functions
-        self.comb_file.activated.connect(self.CheckFiles)
+        self.bt_updatefile.clicked.connect(self.CheckFiles)
         self.CheckFiles()
+        self.comb_file.activated.connect(self.dataloadplot)
+        self.dataloadplot()
         self.cb_selectall.stateChanged.connect(self.select_all)
         self.cb_rawrecording.stateChanged.connect(self.deselect_select_all)
         self.cb_selectedframes.stateChanged.connect(self.deselect_select_all)
@@ -71,7 +73,6 @@ class Main(QMainWindow, Ui_MainWindow):
         self.le_timeinterval.returnPressed.connect(lambda: self.IntervalChange(self))
         self.le_thresholds.returnPressed.connect(lambda: self.ThresholdChange(self))
         self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
-    
     
     def BatchWindow(self):
         try:
@@ -136,7 +137,6 @@ class Main(QMainWindow, Ui_MainWindow):
                 if ".mat" not in files[ii]: ####temporary
                     del files[ii]
         #First disconnect function to be able to update combobox list, then reconnect function
-        self.comb_file.activated.disconnect(self.CheckFiles)
         if len(files)+1!=self.comb_file.count():
             for ii in reversed(range(self.comb_file.count())):
                 if ii!=0:
@@ -144,12 +144,12 @@ class Main(QMainWindow, Ui_MainWindow):
             #self.comb_file.clear()
             #self.comb_file.addItem("Select file")
             self.comb_file.addItems(files)
+        self.OutputNameChange()
+    def dataloadplot(self):
         if self.text!=str(self.comb_file.currentText()):
             self.text=f'{str(self.comb_file.currentText())}'
-            if ".wav" in self.text:
+            if ".wav" in self.text or ".mat" in self.text:
                 self.viewWhole(self)
-        self.OutputNameChange()
-        self.comb_file.activated.connect(self.CheckFiles)
     def OutputNameChange(self):
         if ".wav" not in str(self.comb_file.currentText()):
             self.le_outputname.setText("")

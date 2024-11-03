@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import itertools
 import math
+import re
 import numpy as np
 
 def PlotDataFigure(canvas, data, time, xlabel="", ylabel="", color="k", *, legend=False, xlim=False, lw=1, curves=[], vlines=[],hlines=[], scatterpoints=[], colorcycle=itertools.cycle("rbymgc"), title="", text=[]):
@@ -30,9 +31,8 @@ def PlotDataFigure(canvas, data, time, xlabel="", ylabel="", color="k", *, legen
         for ii,_ in enumerate(data):
             canvas.axs[ii].axvline(line, color=clr)
     for line in hlines:
-        clr='r'
         for ii,_ in enumerate(data):
-            canvas.axs[ii].axhline(line, color=clr)
+            canvas.axs[ii].axhline(line[0], color=line[1])
     for ii,plttext in enumerate(text):
         canvas.axs[ii].text(0.5,0.6,plttext,
                      horizontalalignment='center',
@@ -78,7 +78,12 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], t
     canvas=PlotDataFigure(canvas, data, time, "Time (s)", "Amplitude (a.u.)", "k", colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
-def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=[1], title="Partial"):
+def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, cutoff=[], thresholdsSTR="", *, channels=[1], title="Partial"):
+    if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
+    thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)] #regular expression to filter out all numbers and convert each to int
+    thresholds=list(set(thresholdstmp))
+    thresholds.sort()
+    thresholds=thresholds[::-1] #reverse the list
     #Plot the selected data
     colors=itertools.cycle(colorSTR)
     vlines=[]
@@ -87,12 +92,18 @@ def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, *, channels=[1
             vlines.append(markers[key])
         else:
             [vlines.append(submark) for submark in markers[key]]
-    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", xlim=xlim, colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
+    hlines=[[thresh, next(colors)] for thresh in thresholds]
+    colors=itertools.cycle(colorSTR)
+    if cutoff:
+        hlines.append([cutoff[0], "r"])
+    canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", hlines=hlines, xlim=xlim, colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
 def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, cutoff=[], *, channels=[1], title="Spike"):
     colors=itertools.cycle(colorSTR)
     # Last, create the plot which indicates which spike belongs to which cluster
+    if cutoff:
+        cutoff[0]=[cutoff[0],"r"]
     canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", hlines=cutoff, legend=[[f"T{clus[4][9:]}" for clus in ch] for ch in clusters], scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"{title} sorting (ch{channels})")
     return canvas
 
@@ -133,7 +144,7 @@ def InterSpikeInterval(canvas, clusters,framerate,colorSTR, *, channels=[1], tit
     isispike_times=[[[np.diff(cl[0]),cl[1]] for cl in chan] for chan in spike_times]
     #Create bins and weights
     if any([any([any(cl[0]) for cl in chan]) for chan in isispike_times]):
-        maxval=[[max(cl[0]) for cl in chan] for chan in isispike_times]
+        maxval=[[max(cl[0], default=100) for cl in chan] for chan in isispike_times]
         maxval=int(math.ceil(max(sum(maxval, []))/100))*100
         bins=np.logspace(np.log10(1),np.log10(maxval),50) #20000 is 20 seconds
         weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in isispike_times]
@@ -153,14 +164,19 @@ def AmplitudeDistribution(canvas, clusters, framerate, colorSTR, *, channels=[1]
     #Extract peak heights
     spike_amp_cl = [[[cl[2], cl[4]] for cl in chan] for chan in clusters] # spike amplitude in arbitrary units (a.u.)
     #Create bins and weights
-    maxval=[[max(cl[0]) for cl in chan] for chan in spike_amp_cl]
-    maxval=int(math.ceil(max(sum(maxval, []))/100))*100
-    minval=[[min(cl[0]) for cl in chan] for chan in spike_amp_cl]
-    minval=int(math.floor(min(sum(minval, []))/100))*100
-    bins=np.arange(minval,maxval,(maxval-minval)/40)
-    weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in spike_amp_cl]
-    #Create histogram
-    canvas=PlotHistFigure(canvas, spike_amp_cl, bins, weights, framerate, xlabel="Amplitude (a.u.)",
-                   ylabel="Normalized distribution", title=f"{title} of spike amplitude (ch{channels})",
-                   colorcycle=colors, legend=True)
+    if any([any([any(cl[0]) for cl in chan]) for chan in spike_amp_cl]):
+        maxval=[[max(cl[0], default=100) for cl in chan] for chan in spike_amp_cl]
+        maxval=int(math.ceil(max(sum(maxval, []))/100))*100
+        minval=[[min(cl[0], default=100) for cl in chan] for chan in spike_amp_cl]
+        minval=int(math.floor(min(sum(minval, []))/100))*100
+        bins=np.arange(minval,maxval,(maxval-minval)/40)
+        weights=[[np.ones_like(spikeset[0])/len(spikeset[0]) for spikeset in ch] for ch in spike_amp_cl]
+        #Create histogram
+        canvas=PlotHistFigure(canvas, spike_amp_cl, bins, weights, framerate, xlabel="Amplitude (a.u.)",
+                       ylabel="Normalized distribution", title=f"{title} of spike amplitude (ch{channels})",
+                       colorcycle=colors, legend=True)
+    else:
+        canvas=PlotHistFigure(canvas, spike_amp_cl, [], [], [], xlabel="Amplitude (a.u.)",
+                       ylabel="Normalized distribution", title=f"{title} of spike amplitude (ch{channels})",
+                       colorcycle=colors, legend=True)
     return canvas

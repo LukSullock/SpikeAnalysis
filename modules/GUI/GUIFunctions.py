@@ -80,6 +80,8 @@ For example:
     Audiofile: example.wav
     Markerfile: example-events.txt
 Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
+    if self.cb_flipdata.isChecked():
+        self.data=self.data*-1
     self.statusBar.showMessage('Creating Whole Recording Plot')
     if len(self.data)+1!=self.ccb_channels.count():
         for ii in reversed(range(self.ccb_channels.count())):
@@ -123,6 +125,8 @@ def RunSorting(self):
     self.progressBar.setValue(0)
     self.statusBar.showMessage('Running')
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
+    if self.cb_flipdata.isChecked():
+        self.data=self.data*-1
     currprog+=1
     self.progressBar.setValue(int(currprog/maxprog*100))
     if nomarker: self.WarningMsg("No marker file found.", """The marker file should be a txt file where the filename matches the filename of the audio file with -events after it.
@@ -130,6 +134,7 @@ For example:
     Audiofile: example.wav
     Markerfile: example-events.txt
 Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
+    #Only keep data for selected channels    
     datasel=[self.data[chan-1] for chan in channels]
     #Apply filters if applicable
     #######
@@ -158,7 +163,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     if self.cb_selectedframes.isChecked():
         self.statusBar.showMessage('Partial Recording')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=PlotPartial(canvas, self.markers, self.DataSelection, self.time,self.xlim, self.colorSTR, channels=channels, title=f"{file}: Partial")
+        canvas=PlotPartial(canvas, self.markers, self.DataSelection, self.time,self.xlim, self.colorSTR, self.cutoff_thresh, str(self.le_thresholds.text()), channels=channels, title=f"{file}: Partial")
         addcanvas(self, widget, canvas, "Partial", f"{file}: Partial recording (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
