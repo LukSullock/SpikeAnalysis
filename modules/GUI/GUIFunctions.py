@@ -327,7 +327,8 @@ def SavePlots(self):
     CutoffChange(self)
     IntervalChange(self)
     self.RunSorting(self)
-    SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh)
+    channels=[int(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")]
+    SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh, channels)
     #plt.close('all')
 
 def gettimestamps(self, times):

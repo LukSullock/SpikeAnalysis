@@ -144,7 +144,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
             clusters[ii][clusterN][3] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
-def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
+def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, channels):
     #For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
     #Save files in path where main file is located
     #1 csv file per cluster and 1 pdf file with all plots
@@ -155,9 +155,9 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh):
             adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
             meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
             meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
-            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh]})
+            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh[0][0]]})
             df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
-            df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{jj+1}_cluster{ii+1}.csv'),index=False)
+            df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{channels[jj]}_cluster{ii+1}.csv'),index=False)
     p=PdfPages(os.path.join(folder,f"Plots_{output}.pdf"))
     figs=[plt.figure(n) for n in plt.get_fignums()]
     if figs:

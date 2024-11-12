@@ -23,25 +23,77 @@ import re
 import numpy as np
 
 def PlotDataFigure(canvas, data, time, xlabel="", ylabel="", color="k", *, legend=False, xlim=False, lw=1, curves=[], vlines=[],hlines=[], scatterpoints=[], colorcycle=itertools.cycle("rbymgc"), title="", text=[]):
+    """
+    Function to make a line plot or scatter plot.
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    data : Array of int64
+        Array containing y-values per channel. First index is channel, second contains y-values.
+    time : Array of float64
+        Array containing x-values per channel. First index is channel, second contains x-values.
+    xlabel : String, optional
+        Labelname for x-axis. The default is "".
+    ylabel : String, optional
+        Labelname for y-axis. The default is "".
+    color : String, optional
+        Matplotlib colour denotions. Defines the colour of the plotting for the data parameter. The default is "k" (black).
+    legend : Bool, optional
+        Denotes if a legend should be added. The default is False.
+    xlim : list, optional
+        List of a list of start times and a list of stop times for the time frames. x limit will be set from the first start value to the last stop value. The default is False.
+    lw : Int, optional
+        Linewidth. Defines the colour of the plotting for the data parameter. The default is 1.
+    curves : list, optional
+        list of a list of curves. List of a curve consists out of x-values, y-values, linewidth, alpha, and linecolour. The default is [].
+    vlines : list, optional
+        List of x-values to plot vertical lines on. The default is [].
+    hlines : list, optional
+        List of a list of y-values and line color. The default is [].
+    scatterpoints : list, optional
+        First list index is channel, second is cluster. Cluster[1] is x-values, cluster[3] is y-values, cluster[4] is label. The default is [].
+    colorcycle : cycle, optional
+        Cycle object of itertools containing colour values to be cycled through. The default is itertools.cycle("rbymgc").
+    title : string, optional
+        String to set as title of the figure. The default is "".
+    text : list, optional
+        List containing a single string to be in the middle of the figure. The default is [].
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    """
+    #Set title
     canvas.fig.suptitle(title)
+    #plot channel data in their respective plots
     for ii,chan in enumerate(data):
         canvas.axs[ii].plot(time, chan, color = color, lw=lw)
+    #vertical lines are plotted in all channel plots
     for line in vlines:
         clr=next(colorcycle)
         for ii,_ in enumerate(data):
             canvas.axs[ii].axvline(line, color=clr)
+    #horizontal lines are plotted in all channel plots
     for line in hlines:
         for ii,_ in enumerate(data):
             canvas.axs[ii].axhline(line[0], color=line[1])
+    #in plot text
     for ii,plttext in enumerate(text):
         canvas.axs[ii].text(0.5,0.6,plttext,
                      horizontalalignment='center',
                      verticalalignment="center")
+    #multiple lines per channel
     for ii,chan in enumerate(curves):
         for curve in chan:
             if curve[4]==[]:
                 curve[4]=next(colorcycle)
             canvas.axs[ii].plot(curve[0],curve[1],lw=curve[2],alpha=curve[3],color=curve[4])
+    #x- and y-labels
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
     for ii,chan in enumerate(scatterpoints):
@@ -58,7 +110,7 @@ def PlotHistFigure(canvas, data, bins, weights, framerate, xlabel="", ylabel="",
     for ii, chan in enumerate(data):
         for jj, spikeset in enumerate(chan):
             if len(data[ii][jj][0]):
-                canvas.axs[ii].hist(spikeset[0], bins, weights=weights[ii][jj], density=True, color = next(colorcycle), alpha=0.5, label=f'{data[ii][jj][1]}', ec='black')
+                canvas.axs[ii].hist(spikeset[0], bins, weights=weights[ii][jj], color = next(colorcycle), alpha=0.5, label=f'{data[ii][jj][1]}', ec='black')
     canvas.fig.text(0.01, 0.5, ylabel, va="center", rotation="vertical")
     canvas.fig.text(0.5, 0.02, xlabel, ha="center")
     if legend:
