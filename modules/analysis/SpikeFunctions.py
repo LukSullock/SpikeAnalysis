@@ -31,6 +31,7 @@ matplotlib.use('QtAgg')
 if int(np.__version__.split(".")[0])>1: np.set_printoptions(legacy='1.25')
 import traceback
 from collections import defaultdict
+from modules.analysis.SpikeSorter import find_peaks
 
     
 def OpenRecording(folder, filename):
@@ -38,7 +39,7 @@ def OpenRecording(folder, filename):
     file = os.path.join(folder, filename)
     markername =f"{filename[:-4]}-events.txt"
     markerfile=os.path.join(folder, markername)
-    if ".mat" in filename:     #####temporary
+    if ".mat" in filename:
         mat = sp.io.loadmat(file)
         rec=[500,mat["data"]]
     else:
@@ -94,11 +95,8 @@ def DataSelect(data,markers,framerate,times):
                 except ValueError as err:
                     return False, [f"Marker {str(err)}", traceback.format_exc()]
     #Create lists for start and stop times
-    try:
-        start_time=[art[0] for art in times]
-        stop_time=[art[1] for art in times]
-    except IndexError:
-        return False, False
+    start_time=[art[0] for art in times]
+    stop_time=[art[1] for art in times]
     #Create selection of data
     DataSelection = np.empty((len(data),len(data[0])))
     DataSelection[:]=np.nan
@@ -106,12 +104,20 @@ def DataSelect(data,markers,framerate,times):
         for chan in range(len(DataSelection)):
             #Copy the data of the selected time windows from whole data variable to the dataselection variable
             DataSelection[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]=data[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]
-    return [start_time,stop_time],DataSelection
+    for marker in markers.keys():
+        for ii in reversed(range(len(markers[marker]))):
+            pop=True
+            for jj, start in enumerate(start_time):
+                if markers[marker][ii]>=start and markers[marker][ii]<=stop_time[jj]:
+                    pop=False
+            if pop: markers[marker].pop(ii)
+    markers=defaultdict(None, {key: item for key, item in markers.items() if item})
+    return [start_time,stop_time],DataSelection,markers
 
 
-def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thresh):
+def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_thresh):
     if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
-    thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR)] #regular expression to filter out all numbers and convert each to int
+    thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR) if th] #regular expression to filter out all numbers and convert each to int
     thresholds=list(set(thresholdstmp))
     thresholds.sort()
     thresholds=thresholds[::-1] #reverse the list
@@ -120,7 +126,8 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
     if cutoff_thresh:
         for ii in range(len(DataSelection)):
             th = cutoff_thresh[0]
-            cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
+            #cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
+            cutoff1[ii], _ = find_peaks(DataSelection[ii], threshold=th, subthresh=refractair)
         
     cl2=[[] for _ in range(len(DataSelection))]
     maxval=[[] for _ in range(len(DataSelection))]
@@ -128,13 +135,16 @@ def SpikeSorting(DataSelection,thresholdsSTR,distance,framerate,time, cutoff_thr
     clusters=[[[[],[],[],[],f"Cluster threshold {th}"] for ii,th in enumerate(thresholds)] for _ in range(len(DataSelection))]
     #Get largest peak of selected data
     for ii in range(len(DataSelection)):
-        cl2[ii]=sp.signal.find_peaks(DataSelection[ii], height=0, distance=distance*framerate)[1]["peak_heights"]
-        if cl2[ii].all(): continue
-        maxvalN=np.argmax(cl2[ii])
-        maxval[ii]=cl2[ii][maxvalN]
+        #cl2[ii]=sp.signal.find_peaks(DataSelection[ii], height=0, distance=distance*framerate)[1]["peak_heights"]
+        cl2[ii]=np.nanmax(DataSelection[ii])
+        #if cl2[ii].all(): continue
+        #maxvalN=np.argmax(cl2[ii])
+        #maxval[ii]=cl2[ii][maxvalN]
+        maxval[ii]=cl2[ii]
         # Then, detect the other spikes per cluster, 'Cluster #'
         for clusterN,th in enumerate(thresholds):
-            clusters[ii][clusterN][0] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
+            #clusters[ii][clusterN][0] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
+            clusters[ii][clusterN][0],_ = find_peaks(DataSelection[ii], threshold=th, subthresh=refractair)
             for peakN,x in enumerate(clusters[ii][clusterN][0][0]):
                 if x not in cutoff1[ii][0] and not any(x in clusters[ii][jj][0][0] for jj in range(clusterN)):
                     clusters[ii][clusterN][1].append(x/framerate)
@@ -155,7 +165,9 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, channels)
             adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
             meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
             meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
-            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh[0][0]]})
+            if cutoff_thresh:
+                cutoff_thresh=cutoff_thresh[0][0]
+            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh]})
             df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
             df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{channels[jj]}_cluster{ii+1}.csv'),index=False)
     p=PdfPages(os.path.join(folder,f"Plots_{output}.pdf"))

@@ -24,7 +24,8 @@ from PyQt5.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QMenu,
                         QLabel, QLineEdit, QMenuBar, QPushButton, QAction,
                         QSizePolicy, QSpacerItem, QSpinBox, QTabWidget,
                         QWidget, QApplication,QMainWindow, QDoubleSpinBox,
-                        QScrollArea, QFrame, QStatusBar, QProgressBar)
+                        QScrollArea, QFrame, QStatusBar, QProgressBar,
+                        QDialog, QDialogButtonBox, QFormLayout)
 
 class CheckableComboBox(QComboBox):
     def __init__(self):
@@ -93,7 +94,74 @@ class CheckableComboBox(QComboBox):
         self.model().appendRow(item)
         self.updateLineEditField()
 
+class FilterDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent=parent
+        self.low=QSpinBox(self)
+        self.high=QSpinBox(self)
+        self.notch=QSpinBox(self)
+        self.low.setMinimum(1)
+        self.high.setMinimum(1)
+        self.notch.setMinimum(1)
+        self.low.setMaximum(2147483647)
+        self.high.setMaximum(2147483647)
+        self.notch.setMaximum(2147483647)
+        self.high.setValue(500)
+        self.notch.setValue(50)
+        self.cb_low=QCheckBox(self, text="Bandpass filter low (Hz)")
+        self.cb_high=QCheckBox(self, text="Bandpass filter high (Hz)")
+        self.cb_notch=QCheckBox(self, text="50Hz notch filter")
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel, self);
+
+        if parent:
+            self.low.setValue(self.parent.lowpass)
+            self.high.setValue(self.parent.highpass)
+            self.notch.setValue(self.parent.notchv)
+            if self.parent.bandfilter:
+                self.cb_low.setChecked(True)
+                self.cb_high.setChecked(True)
+            if self.parent.bandfilter:
+                self.cb_notch.setChecked(True)
+        
+        layout = QFormLayout(self)
+        layout.addRow(self.cb_low, self.low)
+        layout.addRow(self.cb_high, self.high)
+        layout.addRow(self.cb_notch, self.notch)
+        layout.addWidget(buttonBox)
+        
+        buttonBox.accepted.connect(self.getInputs)
+        buttonBox.rejected.connect(self.close)
+        self.cb_low.stateChanged.connect(self.CheckAll)
+        self.cb_high.stateChanged.connect(self.CheckAll)
+
+    def CheckAll(self, sender):
+        check=bool(sender)
+        self.cb_low.stateChanged.disconnect()
+        self.cb_high.stateChanged.disconnect()
+        self.cb_low.setChecked(check)
+        self.cb_high.setChecked(check)
+        self.cb_low.stateChanged.connect(self.CheckAll)
+        self.cb_high.stateChanged.connect(self.CheckAll)
+        
+    def getInputs(self):
+        if self.cb_low.isChecked():
+            self.parent.bandfilter=True
+            self.parent.lowpass=self.low.value()
+            self.parent.highpass=self.high.value()
+        if self.cb_notch.isChecked():
+            self.parent.notchfilter=True
+            self.parent.notchv=self.notch.value()
+        self.close()
+    
 class Ui_MainWindow(object):
+    def openFilterDialog(self):
+        try:
+            self.filtdialog=FilterDialog(self)
+        except:
+            return
+        self.filtdialog.show()
+        
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
@@ -113,7 +181,7 @@ class Ui_MainWindow(object):
         self.actionFilters = QAction(MainWindow)
         self.actionFilters.setObjectName(u"actionFilters")
         self.actionOpen_file.setEnabled(False)
-        self.actionFilters.setEnabled(False)
+        #self.actionFilters.setEnabled(False)
 #Buttons
         self.bt_closeplots = QPushButton(self.centralwidget)
         self.bt_closeplots.setObjectName(u"bt_closeplots")
@@ -152,6 +220,14 @@ class Ui_MainWindow(object):
         self.cb_spikesorting.setObjectName(u"cb_spikesorting")
         self.cb_rawrecording = QCheckBox(self.centralwidget)
         self.cb_rawrecording.setObjectName(u"cb_rawrecording")
+        self.cb_autocorr = QCheckBox(self.centralwidget)
+        self.cb_autocorr.setObjectName(u"cb_autocorr")
+        self.cb_crosscorr = QCheckBox(self.centralwidget)
+        self.cb_crosscorr.setObjectName(u"cb_crosscorr")
+        self.cb_powerfreq = QCheckBox(self.centralwidget)
+        self.cb_powerfreq.setObjectName(u"cb_powerfreq")
+        self.cb_erp = QCheckBox(self.centralwidget)
+        self.cb_erp.setObjectName(u"cb_erp")
         self.cb_flipdata = QCheckBox(self.centralwidget)
         self.cb_flipdata.setObjectName(u"cb_flipdata")
 #Comboboxes
@@ -201,42 +277,43 @@ class Ui_MainWindow(object):
         self.sb_refractair = QDoubleSpinBox(self.centralwidget)
         self.sb_refractair.setObjectName(u"sb_refractair")
         self.sb_refractair.setLocale(QLocale(QLocale.Language.English, QLocale.Country.UnitedKingdom))
-        self.sb_refractair.setDecimals(4)
-        self.sb_refractair.setSingleStep(0.001)
-        self.sb_refractair.setValue(0.001)
-        self.sb_refractair.setMinimum(0.0001)
+        self.sb_refractair.setDecimals(2)
+        self.sb_refractair.setSingleStep(0.01)
+        self.sb_refractair.setValue(0.80)
+        self.sb_refractair.setMinimum(0.5)
+        self.sb_refractair.setMaximum(1.0)
 #Tab widget
         self.plt_container = QTabWidget(self.centralwidget)
         self.plt_container.setObjectName(u"plt_container")
 #Add to grid layout
-        self.gridLayout.addWidget(self.plt_container, 0, 0, 13, 6)
-        self.gridLayout.addWidget(self.lbl_file, 13, 0, 1, 1)
-        self.gridLayout.addWidget(self.ccb_channels, 14, 0, 1, 3)
-        self.gridLayout.addWidget(self.lbl_condition, 15, 0, 1, 1)
-        self.gridLayout.addWidget(self.lbl_output, 16, 0, 1, 1)
-        self.gridLayout.addWidget(self.lbl_refractair, 17, 0, 1, 1)
-        self.gridLayout.addWidget(self.lbl_thresholds, 18, 0, 1, 1)
-        self.gridLayout.addWidget(self.cb_cutoff, 19, 0, 1, 1)
-        self.gridLayout.addWidget(self.lbl_timeinterval, 20, 0, 1, 1)
+        self.gridLayout.addWidget(self.plt_container, 0, 0, 20, 6)
+        self.gridLayout.addWidget(self.lbl_file, 20, 0, 1, 1)
+        self.gridLayout.addWidget(self.ccb_channels, 21, 0, 1, 3)
+        self.gridLayout.addWidget(self.lbl_condition, 22, 0, 1, 1)
+        self.gridLayout.addWidget(self.lbl_output, 23, 0, 1, 1)
+        self.gridLayout.addWidget(self.lbl_refractair, 24, 0, 1, 1)
+        self.gridLayout.addWidget(self.lbl_thresholds, 25, 0, 1, 1)
+        self.gridLayout.addWidget(self.cb_cutoff, 26, 0, 1, 1)
+        self.gridLayout.addWidget(self.lbl_timeinterval, 27, 0, 1, 1)
         
-        self.gridLayout.addWidget(self.comb_file, 13, 1, 1, 2)
-        self.gridLayout.addWidget(self.le_condition, 15, 1, 1, 2)
-        self.gridLayout.addWidget(self.le_outputname, 16, 1, 1, 2)
-        self.gridLayout.addWidget(self.sb_refractair, 17, 1, 1, 2)
-        self.gridLayout.addWidget(self.le_thresholds, 18, 1, 1, 2)
-        self.gridLayout.addWidget(self.sb_cutoff, 19, 1, 1, 2)
-        self.gridLayout.addWidget(self.le_timeinterval, 20, 1, 1, 2)
+        self.gridLayout.addWidget(self.comb_file, 20, 1, 1, 2)
+        self.gridLayout.addWidget(self.le_condition, 22, 1, 1, 2)
+        self.gridLayout.addWidget(self.le_outputname, 23, 1, 1, 2)
+        self.gridLayout.addWidget(self.sb_refractair, 24, 1, 1, 2)
+        self.gridLayout.addWidget(self.le_thresholds, 25, 1, 1, 2)
+        self.gridLayout.addWidget(self.sb_cutoff, 26, 1, 1, 2)
+        self.gridLayout.addWidget(self.le_timeinterval, 27, 1, 1, 2)
         
-        self.gridLayout.addWidget(self.bt_updatefile, 13, 3, 1, 1)
+        self.gridLayout.addWidget(self.bt_updatefile, 20, 3, 1, 1)
         
-        self.gridLayout.addWidget(self.bt_file, 14, 3, 1, 1)
-        self.gridLayout.addWidget(self.cb_flipdata, 15, 3, 1, 1)
-        self.gridLayout.addWidget(self.bt_setsettings, 18, 3, 3, 1)
+        self.gridLayout.addWidget(self.bt_file, 21, 3, 1, 1)
+        self.gridLayout.addWidget(self.cb_flipdata, 22, 3, 1, 1)
+        self.gridLayout.addWidget(self.bt_setsettings, 25, 3, 3, 1)
         
-        self.gridLayout.addWidget(self.scroll_markers, 18, 4, 3, 2)
+        self.gridLayout.addWidget(self.scroll_markers, 25, 4, 3, 2)
         self.scroll_markers.setWidget(self.lbl_markers)
         
-        self.gridLayout.addItem(self.horizontalSpacer_2, 13, 5, 1, 1)
+        self.gridLayout.addItem(self.horizontalSpacer_2, 20, 5, 1, 1)
         
         self.gridLayout.addWidget(self.cb_selectall, 0, 6, 1, 1)
         self.gridLayout.addWidget(self.cb_rawrecording, 1, 6, 1, 1)
@@ -245,13 +322,17 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.cb_averagewaveform, 4, 6, 1, 1)
         self.gridLayout.addWidget(self.cb_interspikeinterval, 5, 6, 1, 1)
         self.gridLayout.addWidget(self.cb_amplitudedistribution, 6, 6, 1, 1)
-        self.gridLayout.addItem(self.verticalSpacer_3, 7, 6, 1, 1)
-        self.gridLayout.addWidget(self.cb_externalplot, 8, 6, 1, 1)
-        self.gridLayout.addWidget(self.bt_go, 9, 6, 1, 1)
-        self.gridLayout.addWidget(self.bt_closeplots, 10, 6, 1, 1)
-        self.gridLayout.addItem(self.verticalSpacer, 12, 6, 1, 1)
-        self.gridLayout.addWidget(self.bt_saveall, 13, 6, 1, 1)
-        self.gridLayout.addWidget(self.bt_quit, 20, 6, 1, 1)
+        self.gridLayout.addWidget(self.cb_autocorr, 7, 6, 1, 1)
+        self.gridLayout.addWidget(self.cb_crosscorr, 8, 6, 1, 1)
+        self.gridLayout.addWidget(self.cb_powerfreq, 9, 6, 1, 1)
+        self.gridLayout.addWidget(self.cb_erp, 10, 6, 1, 1)
+        self.gridLayout.addItem(self.verticalSpacer_3, 12, 6, 1, 1)
+        self.gridLayout.addWidget(self.cb_externalplot, 13, 6, 1, 1)
+        self.gridLayout.addWidget(self.bt_go, 14, 6, 1, 1)
+        self.gridLayout.addWidget(self.bt_saveall, 15, 6, 1, 1)
+        self.gridLayout.addWidget(self.bt_closeplots, 16, 6, 1, 1)
+        self.gridLayout.addItem(self.verticalSpacer, 17, 6, 1, 1)
+        self.gridLayout.addWidget(self.bt_quit, 26, 6, 1, 1)
 #Add everything to mainwindow
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -285,6 +366,10 @@ class Ui_MainWindow(object):
         self.cb_externalplot.setText(QCoreApplication.translate("MainWindow", u"Plot in external windows", None))
         self.cb_cutoff.setText(QCoreApplication.translate("MainWindow", u"Cut off threshold", None))
         self.cb_averagewaveform.setText(QCoreApplication.translate("MainWindow", u"Average waveform", None))
+        self.cb_erp.setText(QCoreApplication.translate("MainWindow", u"Event-Related Potential", None))
+        self.cb_crosscorr.setText(QCoreApplication.translate("MainWindow", u"Crosscorrelogram", None))
+        self.cb_autocorr.setText(QCoreApplication.translate("MainWindow", u"Autocorrelogram", None))
+        self.cb_powerfreq.setText(QCoreApplication.translate("MainWindow", u"Spectrogram", None))
         self.lbl_timeinterval.setText(QCoreApplication.translate("MainWindow", u"Time intervals", None))
         self.lbl_markers.setText(QCoreApplication.translate("MainWindow", u"", None))
         self.le_timeinterval.setToolTip(QCoreApplication.translate("MainWindow",
@@ -311,10 +396,10 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.bt_go.setText(QCoreApplication.translate("MainWindow", u"Run selected", None))
         self.lbl_thresholds.setText(QCoreApplication.translate("MainWindow", u"Thresholds", None))
         self.cb_selectall.setText(QCoreApplication.translate("MainWindow", u"Select all", None))
-        self.bt_saveall.setText(QCoreApplication.translate("MainWindow", u"Save selected data and plots", None))
+        self.bt_saveall.setText(QCoreApplication.translate("MainWindow", u"Run and save selected", None))
         self.bt_setsettings.setText(QCoreApplication.translate("MainWindow", u"Set thresholds and\ntime frames", None))
         self.bt_quit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-        self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Distance Between Peaks", None))
+        self.lbl_refractair.setText(QCoreApplication.translate("MainWindow", u"Percentage of threshold for new spike", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
         self.actionOpen_file.setText(QCoreApplication.translate("MainWindow", u"Open file...", None))
         self.actionBatchana.setText(QCoreApplication.translate("MainWindow", u"Batch analysis", None))
@@ -325,6 +410,13 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.scroll_markers.setFrameShape(QFrame.NoFrame)
         self.scroll_markers.setWidgetResizable(True)
         self.scroll_markers.setMinimumHeight(10)
+        self.actionFilters.triggered.connect(self.openFilterDialog)
+    #Filter defaults
+        self.bandfilter=False
+        self.notchfilter=False
+        self.lowpass=1
+        self.highpass=500
+        self.notchv=50
     
 if __name__ == "__main__":
     import sys

@@ -6,6 +6,7 @@ Created on Wed Oct 30 21:16:47 2024
 """
 
 from scipy.signal import butter, lfilter
+from scipy import signal
 import numpy as np
 import scipy as sp
 import matplotlib.pyplot as plt
@@ -17,7 +18,7 @@ data_file = 'c:/users/luksu/onedrive/documenten/school documenten/psychobiologie
 header_size   = 16 * 1024  
 
 # Open file
-sf, rec = sp.io.wavfile.read("Strijder.wav")
+sf, rec = sp.io.wavfile.read("Gabcis.wav")
 
 data=[]
 [data.append(ch[0]) for ch in rec]
@@ -56,8 +57,10 @@ def filter_data(data, low, high, sf, order=2):
 
     return filtered_data
 
+low=1
+high=49
 
-spike_data = filter_data(data, low=1, high=40, sf=sf)
+spike_data = filter_data(data, low=low, high=high, sf=sf)
 
 # Plot signals
 fig, ax = plt.subplots(2, 1, figsize=(15, 5))
@@ -69,7 +72,34 @@ ax[0].set_ylabel('amplitude [A.U.]', fontsize=16)
 ax[0].tick_params(labelsize=12)
 
 ax[1].plot(time[0:sf], spike_data[0:sf])
-ax[1].set_title('Spike channel [1 to 40Hz]', fontsize=23)
+ax[1].set_title(f'Spike channel [{low} to {high}Hz]', fontsize=23)
+ax[1].set_xlim(0, time[sf])
+ax[1].set_xlabel('time [s]', fontsize=20)
+ax[1].set_ylabel('amplitude [A.U.]', fontsize=16)
+ax[1].tick_params(labelsize=12)
+plt.show()
+
+#%%
+# highpass=12
+# nyq=0.5*sf
+# b, a = signal.butter(2, highpass/nyq, btype='highpass')
+# spike_data=signal.filtfilt(b, a, data)
+
+
+b, a= signal.iirnotch(50, 30, sf)
+spike_data=signal.filtfilt(b,a, data)
+
+# Plot signals
+fig, ax = plt.subplots(2, 1, figsize=(15, 5))
+ax[0].plot(time[0:sf], data[0:sf])
+ax[0].set_xticks([])
+ax[0].set_title('Broadband', fontsize=23)
+ax[0].set_xlim(0, time[sf])
+ax[0].set_ylabel('amplitude [A.U.]', fontsize=16)
+ax[0].tick_params(labelsize=12)
+
+ax[1].plot(time[0:sf], spike_data[0:sf])
+ax[1].set_title('Spike channel [50Hz filter]', fontsize=23)
 ax[1].set_xlim(0, time[sf])
 ax[1].set_xlabel('time [s]', fontsize=20)
 ax[1].set_ylabel('amplitude [A.U.]', fontsize=16)

@@ -22,16 +22,19 @@ import itertools
 import re
 import traceback
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
 from matplotlib.patches import Rectangle
-from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox
+from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox, QInputDialog
 from modules.analysis.SpikeFunctions import (OpenRecording, DataSelect, SpikeSorting,
                                    SaveAll)
 from modules.plot.plotfunctions import (PlotWholeRecording, PlotPartial,
                                    SpikeDetection, AverageWaveForm,
-                                   InterSpikeInterval, AmplitudeDistribution)
+                                   InterSpikeInterval, AmplitudeDistribution,
+                                   ERPplots, Spectrogram, AutoCorrelation)
+from modules.analysis.SpikeSorter import filter_data
 
 class MplCanvas(FigureCanvas): #Custom canvas to be able to have in GUI plots
     def __init__(self, parent=None, width=5, height=4, dpi=100, size=1):
@@ -80,6 +83,10 @@ For example:
     Audiofile: example.wav
     Markerfile: example-events.txt
 Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
+    if ".mat" in str(self.comb_file.currentText()):
+        self.framerate, _=QInputDialog.getInt(self,"Framerate","Enter the framerate (Hz) of the recording:", 500, 1)
+        self.time=np.array([x/self.framerate for x in np.arange(np.size(self.data, 1))]) # in seconds
+    self.data=filter_data(self.data, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
     if self.cb_flipdata.isChecked():
         self.data=self.data*-1
     self.statusBar.showMessage('Creating Whole Recording Plot')
@@ -125,6 +132,9 @@ def RunSorting(self):
     self.progressBar.setValue(0)
     self.statusBar.showMessage('Running')
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
+    if ".mat" in str(self.comb_file.currentText()):
+        self.framerate, _=QInputDialog.getInt(self,"Framerate","Enter the framerate (Hz) of the recording:", 500, 1)
+        self.time=np.array([x/self.framerate for x in np.arange(np.size(self.data, 1))]) # in seconds
     if self.cb_flipdata.isChecked():
         self.data=self.data*-1
     currprog+=1
@@ -137,8 +147,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     #Only keep data for selected channels    
     datasel=[self.data[chan-1] for chan in channels]
     #Apply filters if applicable
-    #######
-    
+    datasel=filter_data(datasel, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
     
     #Run all checked options, and necessary functions for variables
     #If cutoff has been selected, take value, otherwise set to false
@@ -155,7 +164,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     self.statusBar.showMessage('Data Selection')
-    self.xlim,self.DataSelection=DataSelect(datasel, self.markers, self.framerate, str(self.le_timeinterval.text()))
+    self.xlim,self.DataSelection, self.markers=DataSelect(datasel, self.markers, self.framerate, str(self.le_timeinterval.text()))
     if not self.xlim: self.ErrorMsg("Error in Time intervals.",f"Marker {self.DataSelection[0]}\n{self.DataSelection[1]}"); return
     currprog+=1
     self.progressBar.setValue(int(currprog/maxprog*100))
@@ -208,16 +217,56 @@ Note that the extensions .wav and .txt are not always visible depending on your 
         addcanvas(self, widget, canvas, "AmpDis", f"{file}: Amplitude distribution (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
+    if self.cb_autocorr.isChecked():
+        self.statusBar.showMessage('Autocorrelogram')
+        widgets=[]
+        canvasses=[]
+        for ii, chan in enumerate(self.clusters):
+            for cl in chan:
+                widget, canvas=CreateCanvas(1, pltext)
+                widgets.append(widget)
+                canvasses.append(canvas)
+        canvasses, clus=AutoCorrelation(canvasses, self.clusters, self.framerate, self.colorSTR, intervalsize=5)
+        for ii, canvas in enumerate(canvasses):
+            addcanvas(self, widgets[ii], canvas, "Autocorr", f"{file}: Autocorrelogram {clus[ii]}", file)
+        currprog+=1
+        self.progressBar.setValue(int(currprog/maxprog*100))
+    if self.cb_crosscorr.isChecked():
+        self.statusBar.showMessage('Crosscorrelogram')
+        widget, canvas=CreateCanvas(len(datasel),pltext)
+        
+        currprog+=1
+        self.progressBar.setValue(int(currprog/maxprog*100))
+    if self.cb_powerfreq.isChecked():
+        self.statusBar.showMessage('Powerfrequentie plot')
+        widget, canvas=CreateCanvas(len(datasel),pltext)
+        canvas=Spectrogram(canvas, self.DataSelection, self.framerate, self.time, channels=channels)
+        addcanvas(self, widget, canvas, "Spectro", f"{file}: Spectrogram (ch{channels})", file)
+        currprog+=1
+        self.progressBar.setValue(int(currprog/maxprog*100))
+    if self.cb_erp.isChecked():
+        self.statusBar.showMessage('ERP plot')
+        widget, canvas=CreateCanvas(len(datasel),pltext)
+        canvas=ERPplots(canvas, self.DataSelection, self.markers, self.framerate, self.colorSTR, xmin=1, xmax=5, channels=channels)
+        addcanvas(self, widget, canvas, "ERP", f"{file}: Event-Related Potential (ch{channels})", file)
+        currprog+=1
+        self.progressBar.setValue(int(currprog/maxprog*100))
     self.progressBar.setValue(100)
     self.statusBar.showMessage('Finished')
     
-def ThresholdChange(self):
-    #Remove old thresholds
-    ncnvs=-1
+def GetTab(self):
+    text=str(self.comb_file.currentText())
+    for ii, canvas in enumerate(self.canvassen):
+        if self.plt_container.tabText(ii).split(":")[0]==text:
+            return ii
     for ii in reversed(range(len((self.canvassen)))):
         if "Whole" in self.canvassen[ii][1]:
-            ncnvs=ii
-            break
+            return ii
+    return -1
+    
+def ThresholdChange(self):
+    #Remove old thresholds
+    ncnvs=GetTab(self)
     if ncnvs==-1: return
     colorcycle=itertools.cycle(self.colorSTR)
     for line in self.threshlines:
@@ -227,7 +276,7 @@ def ThresholdChange(self):
     thresstr=str(self.le_thresholds.text())
     if len(thresstr)==0: return #return if no threshold is given
     if not self.canvassen: return #return if there is no canvas
-    thresholdstmpstr=[th for th in re.split(r"\b\D+", thresstr)] #regular expression to filter out all numbers and convert each to int
+    thresholdstmpstr=[th for th in re.split(r"\b\D+", thresstr) if th] #regular expression to filter out all numbers and convert each to int
     thresholdstmp=[]
     error=False
     for th in thresholdstmpstr:
@@ -247,11 +296,7 @@ def ThresholdChange(self):
 
 def CutoffChange(self):
     #Remove old cut off threshold
-    ncnvs=-1
-    for ii in reversed(range(len((self.canvassen)))):
-        if "Whole" in self.canvassen[ii][1]:
-            ncnvs=ii
-            break
+    ncnvs=GetTab(self)
     if ncnvs==-1: return
     for rec in self.cutoffrec:
         rec.remove()
@@ -268,11 +313,7 @@ def CutoffChange(self):
     
 def IntervalChange(self):
     #Remove old cut off threshold
-    ncnvs=-1
-    for ii in reversed(range(len((self.canvassen)))):
-        if "Whole" in self.canvassen[ii][1]:
-            ncnvs=ii
-            break
+    ncnvs=GetTab(self)
     for interval in self.intervals:
         interval.remove()
     self.intervals=[]

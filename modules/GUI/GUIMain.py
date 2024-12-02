@@ -38,6 +38,11 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cutoffrec=[]
         self.intervals=[]
         self.text=""
+        self.bandfilter=False
+        self.notchfilter=False
+        self.lowpass=1
+        self.highpass=500
+        self.notchv=50
         
         self.RunSorting=RunSortingfnc
         self.SavePlots=SavePlotsfnc
@@ -60,8 +65,13 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_averagewaveform.stateChanged.connect(self.deselect_select_all)
         self.cb_interspikeinterval.stateChanged.connect(self.deselect_select_all)
         self.cb_amplitudedistribution.stateChanged.connect(self.deselect_select_all)
+        self.cb_autocorr.stateChanged.connect(self.deselect_select_all)
+        self.cb_crosscorr.stateChanged.connect(self.deselect_select_all)
+        self.cb_powerfreq.stateChanged.connect(self.deselect_select_all)
+        self.cb_erp.stateChanged.connect(self.deselect_select_all)
         self.ccb_channels.currentTextChanged.connect(self.OutputNameChange)
         self.le_condition.textEdited.connect(self.OutputNameChange)
+        self.plt_container.currentChanged.connect(self.tab_change)
         self.bt_go.clicked.connect(lambda: self.RunSorting(self))
         self.bt_saveall.clicked.connect(lambda: self.SavePlots(self))
         self.bt_closeplots.clicked.connect(self.closePlots)
@@ -109,15 +119,31 @@ class Main(QMainWindow, Ui_MainWindow):
             self.le_thresholds.returnPressed.connect(lambda: self.ThresholdChange(self))
             self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
     
+    def tab_change(self):
+        indx=self.plt_container.currentIndex()
+        file=self.plt_container.tabText(indx).split(":")
+        if file[0]:
+            if "Whole" in file[1]:
+                self.comb_file.setCurrentText(file[0])
+                if len(self.canvassen[indx][0].axs)!=self.ccb_channels.count()-1:
+                    for ii in reversed(range(self.ccb_channels.count())):
+                        if ii!=0:
+                            self.ccb_channels.removeItem(ii)
+                    self.ccb_channels.addItems([f"Channel {ii+1}" for ii in range(len(self.canvassen[indx][0].axs))])
+    
     def deselect_select_all(self):
         self.cb_selectall.stateChanged.disconnect(self.select_all)
         if all([self.cb_rawrecording.isChecked(), self.cb_selectedframes.isChecked(), 
                self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
-               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
+               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked(),
+               self.cb_autocorr.isChecked(), self.cb_crosscorr.isChecked(),
+               self.cb_powerfreq.isChecked(), self.cb_erp.isChecked()]):
             self.cb_selectall.setChecked(True)
         elif not all([self.cb_rawrecording.isChecked(), self.cb_selectedframes.isChecked(), 
                self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
-               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked()]):
+               self.cb_interspikeinterval.isChecked(), self.cb_amplitudedistribution.isChecked(),
+               self.cb_autocorr.isChecked(), self.cb_crosscorr.isChecked(),
+               self.cb_powerfreq.isChecked(), self.cb_erp.isChecked()]):
             self.cb_selectall.setChecked(False)
         self.cb_selectall.stateChanged.connect(self.select_all)
     def select_all(self):
@@ -128,6 +154,10 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_averagewaveform.setChecked(state)
         self.cb_interspikeinterval.setChecked(state)
         self.cb_amplitudedistribution.setChecked(state)
+        self.cb_autocorr.setChecked(state)
+        self.cb_crosscorr.setChecked(state)
+        self.cb_powerfreq.setChecked(state)
+        self.cb_erp.setChecked(state)
         
     def CheckFiles(self):
         #Update combobox with file options
@@ -160,6 +190,13 @@ class Main(QMainWindow, Ui_MainWindow):
         if self.le_condition.text():
             text+=f'_Condition_{str(self.le_condition.text())}'
         self.le_outputname.setText(text)
+    
+    def create_filter_window(self):
+        if self.activefilter:
+            self.activefilter=False
+            self.filterwindow.close()
+            return
+        self.filterwindow
     
     def ErrorMsg(self, text, subtext=""):
         msg = QMessageBox()
