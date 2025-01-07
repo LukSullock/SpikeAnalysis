@@ -202,7 +202,7 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], t
         Series of color values to cycle between.
     channels : list, optional
         List of channel numbers. The default is [1].
-    title : TYPE, optional
+    title : string, optional
         String to set as title of the figure. The default is "Whole".
 
     Returns
@@ -260,6 +260,7 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[
     for ii, chan in enumerate(clusters):
         for cl in chan:
             all_wvf_cl = []
+            all_wvf_cl_std = []
             wvf_y=False
             for spike in cl[1]:
                 #wvf_y is the amplitude per time point and therefor should be equal in length to wvvf_x    
@@ -269,14 +270,20 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[
                 #    wvf_y=wvf_y[0:len(wvf_x)]
                 #all_wvf_cl.append([wvf_x,wvf_y,0.5,0.5,[]])
                 if len(wvf_x)==len(wvf_y):
-                    all_wvf_cl.append([wvf_x,wvf_y,0.5,0.5,[],[]])
+                    all_wvf_cl.append([wvf_x,wvf_y,0.5,0.3,[],[]])
             text=[]
             if all_wvf_cl:
                 all_wvf_cl.append([wvf_x, np.nanmean([yy[1] for yy in all_wvf_cl], axis=0), 2, 1, 'r',[]])
+                all_wvf_cl_std=[wvf_x, np.nanstd([yy[1] for yy in all_wvf_cl], axis=0)]
             else:
                 text=[f"Not enough data\nGot {len(all_wvf_cl)} datapoints\nAtleast 1 datapoint is required."]
             canvasses[n_cnv]=PlotDataFigure(canvasses[n_cnv], [], [], "Time (ms)", "Amplitude (a.u.)", "k", curves=[all_wvf_cl], text=text, title=f"{title} waveforms (ch{channels}) {cl[4]}")
             clus.append(f"Average waveforms ch{ii+1} {cl[4]}")
+            if all_wvf_cl_std:
+                #canvasses[n_cnv].axs[0].fill_between(all_wvf_cl_std[0], all_wvf_cl[-1][1]-all_wvf_cl_std[1], all_wvf_cl[-1][1]+all_wvf_cl_std[1],
+                #                                     facecolor='b')
+                canvasses[n_cnv].axs[0].plot(all_wvf_cl_std[0], all_wvf_cl[-1][1]-all_wvf_cl_std[1], linewidth=1.5, alpha=1, color='orange')
+                canvasses[n_cnv].axs[0].plot(all_wvf_cl_std[0], all_wvf_cl[-1][1]+all_wvf_cl_std[1], linewidth=1.5, alpha=1, color='orange')
             n_cnv+=1
     return canvasses, clus
 
@@ -325,6 +332,141 @@ def AmplitudeDistribution(canvas, clusters, framerate, colorSTR, *, channels=[1]
                        colorcycle=colors, legend=True)
     return canvas
 
+def AutoCorrelation(canvassen, clusters, framerate, colorSTR, intervalsize=5, *, channels=[1], title="Autocorrelogram"):
+    """
+    Function to create an autocorrelation plot per threshold.
+
+    Parameters
+    ----------
+    canvassen : list
+        A list of figures in which the data will be plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    framerate : int
+        Sampling rate of the data.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    intervalsize : int, optional
+        Amount of time in seconds before and after the spike in which to look for correlation. The default is 5.
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Autocorrelogram".
+
+    Returns
+    -------
+    canvassen : list
+        List of the figures in which the data has been plotted.
+        canvassen[N].fig is a matplotlib figure and canvassen[N].axs is a list of matplotlib axes.
+    clus : list
+        A list of the channels and clusters per plot.
+    """
+    colors=itertools.cycle(colorSTR)
+    #Extract timestamps of spikes and convert to location
+    spike_times=[[[[int(x*framerate) for x in cl[1]],cl[4]] for cl in chan] for chan in clusters]
+    #Calculate the autocorrelation per cluster per channel
+    autocorr = [[cross_correlation(spikeset[0], spikeset[0], intervalsize*1000) for spikeset in chan] for chan in spike_times]
+    peakcounts=[[0 for cl in chan] for chan in autocorr]
+    #Calculate total peaks and set the 0ms to 0 peaks for better readability
+    for ii,chan in enumerate(autocorr):
+        for jj,cl in enumerate(chan):
+            peakcounts[ii][jj]=cl[int(len(cl)/2)]
+            autocorr[ii][jj][int(len(cl)/2)]=0
+    clus=[]
+    n_cnv=0
+    for ii, chan in enumerate(autocorr):
+        for jj, cl in enumerate(chan):
+            canvassen[n_cnv]=PlotDataFigure(canvassen[n_cnv], [cl], np.arange(-cl.size/2, cl.size/2)+0.5,
+                             "Time (ms)", "# of spikes", "k", colorcycle=colors, title=f"{title} (ch{ii+1}, {clusters[ii][jj][4]})")
+
+            clus.append(f'ch{channels[ii]}, {clusters[ii][jj][4]}')
+            canvassen[n_cnv].axs[0].text(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=canvassen[n_cnv].axs[0].transAxes)
+            n_cnv+=1
+    return canvassen, clus
+
+def CrossCorrelation(canvas, clusters, framerate, colorSTR, intervalsize=5, x1=[0, 0], x2=[0, 1], *, channels=[1], title="Crosscorrelogram"):
+    """
+    Function to create a cross correlation between 2 clusters. 
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    framerate : int
+        Sampling rate of the data.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    intervalsize : int, optional
+        Amount of time in seconds before and after the spike in which to look for correlation. The default is 5.
+    x1 : list, optional
+        List of two integers. Determines which cluster from which channel is used.
+        First integer is for the channel, the second for the cluster. The default is [0, 0].
+    x2 : list, optional
+        List of two integers. Determines which cluster from which channel is used.
+        First integer is for the channel, the second for the cluster. The default is [0, 1].
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Crosscorrelogram".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    """
+    colors=itertools.cycle(colorSTR)
+    #Extract timestamps of spikes and convert to location
+    spike_times=[[[[int(x*framerate) for x in cl[1]],cl[4]] for cl in chan] for chan in clusters]
+    if type(x1[0])==str:
+        spikeset1=[spike*framerate for spike in x1[1]]
+        tabtitle=f"{title} ({x1[0]}, (ch{x2[0]} {clusters[x2[0]][x2[1]][4]})"
+    else:
+        spikeset1=spike_times[x1[0]][x1[1]][0]
+        tabtitle=f"{title} (ch{x1[0]} {clusters[x1[0]][x1[1]][4]}, (ch{x2[0]} {clusters[x2[0]][x2[1]][4]})"
+    spikeset2=spike_times[x2[0]][x2[1]][0]
+    crosscorr=cross_correlation(spikeset1, spikeset2, intervalsize*1000)
+    canvas=PlotDataFigure(canvas, [crosscorr], np.arange(-crosscorr.size/2, crosscorr.size/2)+0.5,
+                          "Time (ms)", "# of spikes", "k", colorcycle=colors, title=tabtitle)
+    return canvas, tabtitle
+
+def Spectrogram(canvas, data, framerate, time, *, channels=[1], title="Spectrogram"):
+    """
+    Function to create a spectrogram.
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    data : Array of int64
+        Array containing y-values per channel.
+    framerate : int
+        Amount of data points per second.
+    time : Array of float64
+        Array containing x-values per channel. First index is channel, second contains x-values.
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Spectrogram".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    """
+    canvas.fig.suptitle(f"{title} (ch{channels})")
+    for ii,chan in enumerate(data):
+        canvas.axs[ii].specgram(chan, Fs=framerate, cmap="rainbow")
+    canvas.fig.text(0.01, 0.5, "Frequency (Hz)", va="center", rotation="vertical")
+    canvas.fig.text(0.5, 0.02, "Time (s)", ha="center")
+    return canvas
+
 def ERPplots(canvas, data, markers, framerate, colorSTR, xmin=1, xmax=5, *, channels=[1], title="ERP"):
     """
     Function to plot ERP signal per marker signature.
@@ -340,14 +482,16 @@ def ERPplots(canvas, data, markers, framerate, colorSTR, xmin=1, xmax=5, *, chan
         Dictionary with marker numbers as keys, and marker time stamps as values.
     framerate : int
         Amount of data points per second.
+            Sampling rate of the data.
+        colorSTR : dict, list, string
     xmin : float, optional
         DESCRIPTION. The default is 0.5.
     xmax : float, optional
         DESCRIPTION. The default is 5.
     channels : list, optional
         List of channel numbers. The default is [1].
-    title : TYPE, optional
-        String to set as title of the figure. The default is "Whole".
+    title : string, optional
+        String to set as title of the figure. The default is "ERP".
 
     Returns
     -------
@@ -371,53 +515,9 @@ def ERPplots(canvas, data, markers, framerate, colorSTR, xmin=1, xmax=5, *, chan
     colors=itertools.cycle(colorSTR)
     for ii in range(len(canvas.axs)):
         canvas.axs[ii].legend(frameon=False, loc="lower right")
-    return canvas
-
-def Spectrogram(canvas, data, framerate, time, *, channels=[1], title="Spectogram"):
-    """
-    Function to create a spectrogram
-
-    Parameters
-    ----------
-    canvas : class
-        The figure in which the data is plotted.
-        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
-    data : Array of int64
-        Array containing y-values per channel.
-    framerate : int
-        Amount of data points per second.
-    time : Array of float64
-        Array containing x-values per channel. First index is channel, second contains x-values.
-    channels : list, optional
-        List of channel numbers. The default is [1].
-    title : TYPE, optional
-        String to set as title of the figure. The default is "Whole".
-
-    Returns
-    -------
-    canvas : TYPE
-        DESCRIPTION.
-
-    """
-    canvas.fig.suptitle(f"{title} (ch{channels})")
-    for ii,chan in enumerate(data):
-        canvas.axs[ii].specgram(chan, Fs=framerate, cmap="rainbow")
-    canvas.fig.text(0.01, 0.5, "Frequency (Hz)", va="center", rotation="vertical")
-    canvas.fig.text(0.5, 0.02, "Time (s)", ha="center")
-    return canvas
-
-def AutoCorrelation(canvassen, clusters, framerate, colorSTR, intervalsize=5, *, channels=[1], title="Autocorrelogram"):
-    colors=itertools.cycle(colorSTR)
-    #Extract timestamps of spikes and convert to location
-    spike_times=[[[[int(x*framerate) for x in cl[1]],cl[4]] for cl in chan] for chan in clusters]
-    autocorr = [[cross_correlation(spikeset[0], spikeset[0], intervalsize*framerate) for spikeset in chan] for chan in spike_times]
-    clus=[]
-    n_cnv=0
-    for ii, chan in enumerate(autocorr):
-        for jj, cl in enumerate(chan):
-            canvassen[n_cnv]=PlotDataFigure(canvassen[n_cnv], [cl], np.arange(-cl.size/2, cl.size/2)/framerate*1000,
-                             "Time (ms)", "# of spikes", "k", colorcycle=colors, title=f"{title} (ch{ii+1}, {clusters[ii][jj][4]})")
-            clus.append(f'ch{ii+1}, {clusters[ii][jj][4]}')
-            n_cnv+=1
-    return canvassen, clus
+    erpsignals=[]
+    for ii, ch in enumerate(all_avg_mf):
+        erpsignals.append({erp[5]: erp[1] for erp in ch})
+        erpsignals[ii]["Time (s)"]=all_avg_mf[0][0][0]
+    return canvas, erpsignals
     

@@ -39,11 +39,15 @@ def OpenRecording(folder, filename):
     file = os.path.join(folder, filename)
     markername =f"{filename[:-4]}-events.txt"
     markerfile=os.path.join(folder, markername)
-    if ".mat" in filename:
+    if ".mat" in filename: #For fysiorecorder (EEG)
         mat = sp.io.loadmat(file)
         rec=[500,mat["data"]]
-    else:
+    elif ".wav" in filename: #For SpikeRecorder (Backyard Brains, SpikerBox)
         rec = sp.io.wavfile.read(file)
+    elif ".npz" in filename[-4:]: #SpikeAnalysis tool saved data
+        #_ = file.seek(0)
+        npzfile=np.load(file)
+        rec=[int(npzfile["sf"]), npzfile["data"]]
     nomarker=False
     try:
         with open(markerfile, encoding="utf8") as csvfile:
@@ -53,11 +57,12 @@ def OpenRecording(folder, filename):
         markersCSV=[]
     #setup data from import .wav file
     framerate = rec[0]
-    if np.int16==type(rec[1][0]): #when single channel recording
-        data=np.hstack([int(point) for point in rec[1]])
-        data=np.array([data])
-    else: #with more than 1 channel recording
-        data=np.vstack([np.array([int(point[chan-1]) for point in rec[1]]) for chan in range(len(rec[1][0]))])
+    if len(rec[1].shape)==1: #when single channel recording
+        data=[rec[1]]
+    elif rec[1].shape[0]>rec[1].shape[1]: #check if axes need to be swapped
+        data=np.swapaxes(rec[1], 0, 1)
+    else:
+        data=rec[1]
     nframes = np.size(data, 1)
     time = np.array([x/framerate for x in np.arange(nframes)]) # in seconds
     #setup marker list
@@ -154,7 +159,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_t
             clusters[ii][clusterN][3] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
-def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, channels):
+def SaveAll(clusters, erpsignals,start_time,stop_time,folder,output,cutoff_thresh, channels):
     #For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
     #Save files in path where main file is located
     #1 csv file per cluster and 1 pdf file with all plots
@@ -165,9 +170,9 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, channels)
             adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
             meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
             meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
-            if cutoff_thresh:
-                cutoff_thresh=cutoff_thresh[0][0]
-            cutoffdf=pd.DataFrame({"Cut off threshold": [cutoff_thresh]})
+            # if cutoff_thresh:
+            #     cutoff_thresh=cutoff_thresh[0]
+            cutoffdf=pd.DataFrame({"Cut off threshold": cutoff_thresh})
             df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
             df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{channels[jj]}_cluster{ii+1}.csv'),index=False)
     p=PdfPages(os.path.join(folder,f"Plots_{output}.pdf"))
@@ -175,6 +180,10 @@ def SaveAll(clusters,start_time,stop_time,folder,output,cutoff_thresh, channels)
     if figs:
         [fig.savefig(p, format='pdf') for fig in figs]
     p.close()
+    if erpsignals:
+        for ii,ch in enumerate(erpsignals):
+            df=pd.DataFrame(ch)
+            df.to_csv(os.path.join(folder,f'ERP_{output}_channel{channels[ii]}.csv'),index=False)
 
 
 

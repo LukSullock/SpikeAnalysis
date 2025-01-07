@@ -23,6 +23,7 @@ import re
 import traceback
 import matplotlib.pyplot as plt
 import numpy as np
+from PyQt5 import QtCore
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -33,8 +34,9 @@ from modules.analysis.SpikeFunctions import (OpenRecording, DataSelect, SpikeSor
 from modules.plot.plotfunctions import (PlotWholeRecording, PlotPartial,
                                    SpikeDetection, AverageWaveForm,
                                    InterSpikeInterval, AmplitudeDistribution,
-                                   ERPplots, Spectrogram, AutoCorrelation)
-from modules.analysis.SpikeSorter import filter_data
+                                   ERPplots, Spectrogram, AutoCorrelation,
+                                   CrossCorrelation)
+from modules.GUI.Ui_SpikeSorting import crosscorrDialog
 
 class MplCanvas(FigureCanvas): #Custom canvas to be able to have in GUI plots
     def __init__(self, parent=None, width=5, height=4, dpi=100, size=1):
@@ -86,7 +88,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     if ".mat" in str(self.comb_file.currentText()):
         self.framerate, _=QInputDialog.getInt(self,"Framerate","Enter the framerate (Hz) of the recording:", 500, 1)
         self.time=np.array([x/self.framerate for x in np.arange(np.size(self.data, 1))]) # in seconds
-    self.data=filter_data(self.data, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
+    self.data=self.filter_data(self.data, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
     if self.cb_flipdata.isChecked():
         self.data=self.data*-1
     self.statusBar.showMessage('Creating Whole Recording Plot')
@@ -107,7 +109,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     self.canvassen[-1][0].draw()
     self.statusBar.showMessage('Finished')
     
-def RunSorting(self):
+def RunSorting(self, spikesort=False):
     file=str(self.comb_file.currentText())
     if file=="Select file":
         self.ErrorMsg("Please select a datafile")
@@ -118,17 +120,23 @@ def RunSorting(self):
     else:
         self.ErrorMsg("Please select a channel.")
         return
-    if len(str(self.le_thresholds.text()))==0:
-        reply=self.WarningContinue("No thresholds set. Do you wish to continue?", "Warning, this will likely take a while to process.")
-        if reply==QMessageBox.No: return
-    maxprog=3
+    maxprog=2
     currprog=0
     if self.cb_rawrecording.isChecked(): maxprog+=1
     if self.cb_selectedframes.isChecked(): maxprog+=1
-    if self.cb_spikesorting.isChecked(): maxprog+=1
-    if self.cb_averagewaveform.isChecked(): maxprog+=1
-    if self.cb_interspikeinterval.isChecked(): maxprog+=1
-    if self.cb_amplitudedistribution.isChecked(): maxprog+=1
+    if self.cb_spikesorting.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_averagewaveform.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_interspikeinterval.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_amplitudedistribution.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_autocorr.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_crosscorr.isChecked(): maxprog+=1; spikesort=True
+    if self.cb_powerfreq.isChecked(): maxprog+=1
+    if self.cb_erp.isChecked(): maxprog+=1
+    if spikesort: maxprog+=1
+    
+    if len(str(self.le_thresholds.text()))==0 and spikesort:
+        reply=self.WarningContinue("No thresholds set. Do you wish to continue?", "Warning, this will likely take a while to process.")
+        if reply==QMessageBox.No: return
     self.progressBar.setValue(0)
     self.statusBar.showMessage('Running')
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
@@ -147,7 +155,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     #Only keep data for selected channels    
     datasel=[self.data[chan-1] for chan in channels]
     #Apply filters if applicable
-    datasel=filter_data(datasel, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
+    datasel=self.filter_data(datasel, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
     
     #Run all checked options, and necessary functions for variables
     #If cutoff has been selected, take value, otherwise set to false
@@ -177,10 +185,12 @@ Note that the extensions .wav and .txt are not always visible depending on your 
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     #Spike sorting
-    self.statusBar.showMessage('Spike Sorting')
-    self.clusters=SpikeSorting(self.DataSelection, str(self.le_thresholds.text()), self.sb_refractair.value(), self.framerate, self.time, self.cutoff_thresh)
-    currprog+=1
-    self.progressBar.setValue(int(currprog/maxprog*100))
+    if spikesort:
+        self.statusBar.showMessage('Spike Sorting')
+        self.clusters=SpikeSorting(self.DataSelection, str(self.le_thresholds.text()), self.sb_refractair.value(), self.framerate, self.time, self.cutoff_thresh)
+        currprog+=1
+        self.progressBar.setValue(int(currprog/maxprog*100))
+    else: self.clusters=[]
     #Plot spike sorting
     if self.cb_spikesorting.isChecked():
         self.statusBar.showMessage('Spike Detection')
@@ -226,15 +236,34 @@ Note that the extensions .wav and .txt are not always visible depending on your 
                 widget, canvas=CreateCanvas(1, pltext)
                 widgets.append(widget)
                 canvasses.append(canvas)
-        canvasses, clus=AutoCorrelation(canvasses, self.clusters, self.framerate, self.colorSTR, intervalsize=5)
+        canvasses, clus=AutoCorrelation(canvasses, self.clusters, self.framerate, self.colorSTR, intervalsize=5, channels=channels)
         for ii, canvas in enumerate(canvasses):
             addcanvas(self, widgets[ii], canvas, "Autocorr", f"{file}: Autocorrelogram {clus[ii]}", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     if self.cb_crosscorr.isChecked():
         self.statusBar.showMessage('Crosscorrelogram')
-        widget, canvas=CreateCanvas(len(datasel),pltext)
-        
+        #Show plots so that previous plots can be used in determining which clusters are to be cross correlated
+        plt.show()
+        self.x1=[0,0] #[channel, cluster]
+        self.x2=[0,1]
+        #Custom input dialog for selecting clusters
+        ccdia=crosscorrDialog(self)
+        ccdia.setAttribute(QtCore.Qt.WA_DeleteOnClose)
+        ccdia.show()
+        #Event loop to pause main window
+        loop = QtCore.QEventLoop()
+        #Exit event loop when the input dialog is closed
+        ccdia.destroyed.connect(loop.quit)
+        #Execute event loop
+        loop.exec()
+        widget, canvas=CreateCanvas(1,pltext)
+        #Window to ask for which clusters to compare; likely in format of drop down boxes or int invul
+        x1=self.x1
+        x2=self.x2
+        canvas, tabtitle=CrossCorrelation(canvas, self.clusters, self.framerate, self.colorSTR, intervalsize=5, x1=x1, x2=x2)
+        #Edit tab title to include cluster threshold instead of index
+        addcanvas(self, widget, canvas, "Crosscorr", f"{file}: {tabtitle}", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     if self.cb_powerfreq.isChecked():
@@ -247,13 +276,13 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     if self.cb_erp.isChecked():
         self.statusBar.showMessage('ERP plot')
         widget, canvas=CreateCanvas(len(datasel),pltext)
-        canvas=ERPplots(canvas, self.DataSelection, self.markers, self.framerate, self.colorSTR, xmin=1, xmax=5, channels=channels)
+        canvas, self.erpsignal=ERPplots(canvas, self.DataSelection, self.markers, self.framerate, self.colorSTR, xmin=self.sb_erpmin.value(), xmax=self.sb_erpmax.value(), channels=channels)
         addcanvas(self, widget, canvas, "ERP", f"{file}: Event-Related Potential (ch{channels})", file)
         currprog+=1
         self.progressBar.setValue(int(currprog/maxprog*100))
     self.progressBar.setValue(100)
     self.statusBar.showMessage('Finished')
-    
+
 def GetTab(self):
     text=str(self.comb_file.currentText())
     for ii, canvas in enumerate(self.canvassen):
@@ -369,7 +398,8 @@ def SavePlots(self):
     IntervalChange(self)
     self.RunSorting(self)
     channels=[int(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")]
-    SaveAll(self.clusters, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh, channels)
+    SaveAll(self.clusters, self.erpsignal, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh, channels)
+    self.InfoMsg(f'Files for {str(self.le_outputname.text())} {channels} saved.', f'Files can be found at {os.getcwd()}/saved')
     #plt.close('all')
 
 def gettimestamps(self, times):

@@ -25,10 +25,12 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QMessageBox
 from modules.GUI.Ui_SpikeSorting import Ui_MainWindow
 import modules.GUI.GUIFunctions as GUIFunctions
 from modules.GUI.GUIBatchMain import BatchWidget
+from modules.analysis.SpikeSorter import filter_data
 
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self, *, RunSortingfnc, SavePlotsfnc, ViewWholefnc, ThrChangefnc,
-                 CutoffChangefnc, IntervalChangefnc, GetTimeStampsfnc, UpdateWholePlotfnc):
+                 CutoffChangefnc, IntervalChangefnc, GetTimeStampsfnc, UpdateWholePlotfnc,
+                 FilterDatafnc):
         super(Main, self).__init__()
         self.setupUi(self)
         self.colorSTR=TABLEAU_COLORS
@@ -52,6 +54,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.IntervalChange=IntervalChangefnc
         self.gettimestamps=GetTimeStampsfnc
         self.UpdateWholePlot=UpdateWholePlotfnc
+        self.filter_data=FilterDatafnc
         
         #Connect functions
         self.bt_updatefile.clicked.connect(self.CheckFiles)
@@ -163,9 +166,8 @@ class Main(QMainWindow, Ui_MainWindow):
         #Update combobox with file options
         files=os.listdir("data")
         for ii in reversed(range(len(files))):
-            if ".wav" not in files[ii]:
-                if ".mat" not in files[ii]: ####temporary
-                    del files[ii]
+            if ".wav" not in files[ii] and ".mat" not in files[ii] and ".npz" not in files[ii]:
+                del files[ii]
         #First disconnect function to be able to update combobox list, then reconnect function
         if len(files)+1!=self.comb_file.count():
             for ii in reversed(range(self.comb_file.count())):
@@ -178,7 +180,7 @@ class Main(QMainWindow, Ui_MainWindow):
     def dataloadplot(self):
         if self.text!=str(self.comb_file.currentText()):
             self.text=f'{str(self.comb_file.currentText())}'
-            if ".wav" in self.text or ".mat" in self.text:
+            if ".wav" in self.text or ".mat" in self.text or ".npz" in self.text:
                 self.viewWhole(self)
     def OutputNameChange(self):
         if ".wav" not in str(self.comb_file.currentText()):
@@ -239,7 +241,8 @@ def start():
     ui = Main(RunSortingfnc=GUIFunctions.RunSorting, SavePlotsfnc=GUIFunctions.SavePlots,
               ViewWholefnc=GUIFunctions.ViewWhole, ThrChangefnc=GUIFunctions.ThresholdChange,
               CutoffChangefnc=GUIFunctions.CutoffChange, IntervalChangefnc=GUIFunctions.IntervalChange,
-              GetTimeStampsfnc=GUIFunctions.gettimestamps, UpdateWholePlotfnc=GUIFunctions.UpdateWholePlot)
+              GetTimeStampsfnc=GUIFunctions.gettimestamps, UpdateWholePlotfnc=GUIFunctions.UpdateWholePlot,
+              FilterDatafnc=filter_data)
     ui.show()
     sys.exit(app.exec())
         

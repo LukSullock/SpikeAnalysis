@@ -17,6 +17,8 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
+import os
+import numpy as np
 from PyQt5.QtCore import (QCoreApplication, QSize, QMetaObject,
                           QRect, Qt, QEvent, QLocale)
 from PyQt5.QtGui import (QStandardItem, QBrush, QColor)
@@ -101,6 +103,7 @@ class FilterDialog(QDialog):
         self.low=QSpinBox(self)
         self.high=QSpinBox(self)
         self.notch=QSpinBox(self)
+        self.save=QPushButton(self, text="Save filtered signal")
         self.low.setMinimum(1)
         self.high.setMinimum(1)
         self.notch.setMinimum(1)
@@ -128,13 +131,38 @@ class FilterDialog(QDialog):
         layout.addRow(self.cb_low, self.low)
         layout.addRow(self.cb_high, self.high)
         layout.addRow(self.cb_notch, self.notch)
-        layout.addWidget(buttonBox)
+        layout.addRow(self.save, buttonBox)
         
         buttonBox.accepted.connect(self.getInputs)
         buttonBox.rejected.connect(self.close)
         self.cb_low.stateChanged.connect(self.CheckAll)
         self.cb_high.stateChanged.connect(self.CheckAll)
-
+        self.save.clicked.connect(self.SaveSignal)
+    
+    def SaveSignal(self):
+        datafilt=self.parent.filter_data(self.parent.data, self.parent.framerate,
+                            low=self.low.value(), high=self.high.value(), 
+                            notch=self.notch.value(), order=2, 
+                            notchfilter=self.cb_notch.isChecked(), 
+                            bandfilter=self.cb_low.isChecked())
+        file = os.path.join(f"{os.getcwd()}/data", f'{str(self.parent.comb_file.currentText()[:-4])}_filt.npz')
+        markername =f"{str(self.parent.comb_file.currentText()[:-4])}-events.txt"
+        markernew =f"{str(self.parent.comb_file.currentText()[:-4])}_filt-events.txt"
+        markerfile=os.path.join(f"{os.getcwd()}/data", markername)
+        markerfilenew=os.path.join(f"{os.getcwd()}/data", markernew)
+        with open(file,"wb") as f:
+            np.savez(f, sf=self.parent.framerate, data=np.swapaxes(datafilt,0,1))
+        try:
+            with open(markerfile, encoding="utf8") as csvfile:
+                markersCSV=csvfile.read()
+            with open(markerfilenew,"w", encoding="utf-8") as csvfile:
+                csvfile.write(markersCSV)
+        except FileNotFoundError:
+            pass
+        
+        self.parent.InfoMsg("Saved filtered data.", f'Data can be found at:\n{file}')
+        
+    
     def CheckAll(self, sender):
         check=bool(sender)
         self.cb_low.stateChanged.disconnect()
@@ -154,6 +182,58 @@ class FilterDialog(QDialog):
             self.parent.notchv=self.notch.value()
         self.close()
     
+class crosscorrDialog(QDialog):
+    def __init__(self, parent=None):
+        super().__init__()
+        self.parent=parent
+        self.channel1=QComboBox(self)
+        self.channel2=QComboBox(self)
+        self.cluster1=QComboBox(self)
+        self.cluster2=QComboBox(self)
+        buttonBox = QDialogButtonBox(QDialogButtonBox.Ok, self);
+        if parent:
+            channels=str(self.parent.ccb_channels.currentText()).split(", ")
+            self.channel1.addItems(channels)
+            markersN=self.parent.markers.keys()
+            markers=[f"Marker {mark}" for mark in markersN]
+            self.channel1.addItems(markers)
+            self.channel2.addItems(channels)
+            self.clusters=[[] for _ in range(len(channels))]
+            for ii, ch in enumerate(self.parent.clusters):
+                for cl in ch:
+                    self.clusters[ii].append(cl[4])
+        layout = QFormLayout(self)
+        layout.addRow(self.channel1, self.cluster1)
+        layout.addRow(self.channel2, self.cluster2)
+        layout.addRow(buttonBox)
+        buttonBox.accepted.connect(self.getInputs)
+        self.channel1.currentIndexChanged.connect(self.channelChange1)
+        self.channel2.currentIndexChanged.connect(self.channelChange2)
+        self.channelChange1()
+        self.channelChange2()
+        
+    def channelChange1(self):
+        channelindx=self.channel1.currentIndex()
+        for ii in reversed(range(self.cluster1.count())):
+            self.cluster1.removeItem(ii)
+        if "Channel" in self.channel1.currentText():
+            self.cluster1.addItems(self.clusters[channelindx])
+    def channelChange2(self):
+        channelindx=self.channel1.currentIndex()
+        for ii in reversed(range(self.cluster2.count())):
+            self.cluster2.removeItem(ii)
+        self.cluster2.addItems(self.clusters[channelindx])
+        
+    def getInputs(self):
+        if "Channel" in self.channel1.currentText():
+            self.parent.x1=[self.channel1.currentIndex(), self.cluster1.currentIndex()]
+        elif "Marker" in self.channel1.currentText():
+            markerN=float(self.channel1.currentText().split("Marker ")[-1])
+            self.parent.x1=[self.channel1.currentText(), self.parent.markers[markerN]]
+        self.parent.x2=[self.channel2.currentIndex(), self.cluster2.currentIndex()]
+        self.close()
+            
+        
 class Ui_MainWindow(object):
     def openFilterDialog(self):
         try:
@@ -249,6 +329,10 @@ class Ui_MainWindow(object):
         self.lbl_timeinterval.setObjectName(u"lbl_timeinterval")
         self.lbl_markers = QLabel(self.centralwidget)
         self.lbl_markers.setObjectName(u"lbl_markers")
+        self.lbl_erpminmax = QLabel(self.centralwidget)
+        self.lbl_erpminmax.setObjectName(u"lbl_erpminmax")
+        # self.lbl_snr = QLabel(self.centralwidget)
+        # self.lbl_snr.setObjectName(u"lbl_snr")
 #Line edits
         self.le_condition = QLineEdit(self.centralwidget)
         self.le_condition.setObjectName(u"le_condition")
@@ -282,6 +366,16 @@ class Ui_MainWindow(object):
         self.sb_refractair.setValue(0.80)
         self.sb_refractair.setMinimum(0.5)
         self.sb_refractair.setMaximum(1.0)
+        self.sb_erpmin=QDoubleSpinBox(self.centralwidget)
+        self.sb_erpmin.setObjectName(u"sb_erpmin")
+        self.sb_erpmin.setSingleStep(0.001)
+        self.sb_erpmin.setDecimals(3)
+        self.sb_erpmin.setValue(1)
+        self.sb_erpmax=QDoubleSpinBox(self.centralwidget)
+        self.sb_erpmax.setObjectName(u"sb_erpmax")
+        self.sb_erpmax.setSingleStep(0.001)
+        self.sb_erpmax.setDecimals(3)
+        self.sb_erpmax.setValue(5)
 #Tab widget
         self.plt_container = QTabWidget(self.centralwidget)
         self.plt_container.setObjectName(u"plt_container")
@@ -295,6 +389,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.lbl_thresholds, 25, 0, 1, 1)
         self.gridLayout.addWidget(self.cb_cutoff, 26, 0, 1, 1)
         self.gridLayout.addWidget(self.lbl_timeinterval, 27, 0, 1, 1)
+        self.gridLayout.addWidget(self.lbl_erpminmax, 28, 0, 1, 1)
         
         self.gridLayout.addWidget(self.comb_file, 20, 1, 1, 2)
         self.gridLayout.addWidget(self.le_condition, 22, 1, 1, 2)
@@ -303,6 +398,9 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.le_thresholds, 25, 1, 1, 2)
         self.gridLayout.addWidget(self.sb_cutoff, 26, 1, 1, 2)
         self.gridLayout.addWidget(self.le_timeinterval, 27, 1, 1, 2)
+        self.gridLayout.addWidget(self.sb_erpmin, 28,1,1,1)
+        
+        self.gridLayout.addWidget(self.sb_erpmax, 28,2,1,1)
         
         self.gridLayout.addWidget(self.bt_updatefile, 20, 3, 1, 1)
         
@@ -310,6 +408,7 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.cb_flipdata, 22, 3, 1, 1)
         self.gridLayout.addWidget(self.bt_setsettings, 25, 3, 3, 1)
         
+        # self.gridLayout.addWidget(self.lbl_snr, 20, 4, 1, 1)
         self.gridLayout.addWidget(self.scroll_markers, 25, 4, 3, 2)
         self.scroll_markers.setWidget(self.lbl_markers)
         
@@ -332,7 +431,8 @@ class Ui_MainWindow(object):
         self.gridLayout.addWidget(self.bt_saveall, 15, 6, 1, 1)
         self.gridLayout.addWidget(self.bt_closeplots, 16, 6, 1, 1)
         self.gridLayout.addItem(self.verticalSpacer, 17, 6, 1, 1)
-        self.gridLayout.addWidget(self.bt_quit, 26, 6, 1, 1)
+        self.gridLayout.addWidget(self.bt_quit, 28, 6, 1, 1)
+        
 #Add everything to mainwindow
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
@@ -372,6 +472,7 @@ class Ui_MainWindow(object):
         self.cb_powerfreq.setText(QCoreApplication.translate("MainWindow", u"Spectrogram", None))
         self.lbl_timeinterval.setText(QCoreApplication.translate("MainWindow", u"Time intervals", None))
         self.lbl_markers.setText(QCoreApplication.translate("MainWindow", u"", None))
+        self.lbl_erpminmax.setText(QCoreApplication.translate("MainWindow", u"Time (s) before and after ERP", None))
         self.le_timeinterval.setToolTip(QCoreApplication.translate("MainWindow",
 u"Format: [Start time 1] to [Stop time 2] and [Start time 2] to [Stop time 2] etc.\n"
 "e.g. 1: marker 1 to 61 and 120 to marker 2\n"
