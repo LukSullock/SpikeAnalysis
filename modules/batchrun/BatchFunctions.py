@@ -6,6 +6,17 @@ Created on Fri Oct 11 10:52:33 2024
 """
 
 def toggleedit(parent, state):
+    """
+    Disable or enable all checkboxes in the parent GUI
+
+    Parameters
+    ----------
+    parent : class
+        Pointer to the main GUI.
+    state : bool
+        The disabled state all the checkboxes should be set to.
+
+    """
     parent.comb_file.setDisabled(state)
     parent.ccb_channels.setDisabled(state)
     parent.le_condition.setReadOnly(state)
@@ -18,6 +29,15 @@ def toggleedit(parent, state):
     
 
 def RunBatch(self, parent):
+    """
+    Runs the RunSorting function for every batch, see modules/GUI/GUIFunctions.py.
+
+    Parameters
+    ----------
+    parent : class
+        Pointer to the main GUI.
+
+    """
     #To prevent self.checks from raising a warning if thresholds in main window is left empty
     if self.le_thresholds[0].text()[0]=="[" and self.le_thresholds[0].text()[-1]=="]":
         thtext=self.le_thresholds[0].text()[1:-1].split(";")
@@ -50,6 +70,15 @@ def RunBatch(self, parent):
     toggleedit(parent, False)
         
 def SaveBatch(self, parent):
+    """
+    Runs the SavePlots function for every batch, see modules/GUI/GUIFunctions.py.
+
+    Parameters
+    ----------
+    parent : class
+        Pointer to the main GUI.
+
+    """
     channels=self.checks(parent)
     if not channels:
         return

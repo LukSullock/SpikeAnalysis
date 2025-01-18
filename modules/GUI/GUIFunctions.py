@@ -24,6 +24,7 @@ import traceback
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import QtCore
+from decimal import Decimal, ROUND_HALF_UP
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from matplotlib.figure import Figure
@@ -31,24 +32,45 @@ from matplotlib.patches import Rectangle
 from PyQt5.QtWidgets import QVBoxLayout, QWidget, QMessageBox, QInputDialog
 from modules.analysis.SpikeFunctions import (OpenRecording, DataSelect, SpikeSorting,
                                    SaveAll)
-from modules.plot.plotfunctions import (PlotWholeRecording, PlotPartial,
+from modules.plot.PlotFunctions import (PlotWholeRecording, PlotPartial,
                                    SpikeDetection, AverageWaveForm,
                                    InterSpikeInterval, AmplitudeDistribution,
                                    ERPplots, Spectrogram, AutoCorrelation,
                                    CrossCorrelation)
 from modules.GUI.Ui_SpikeSorting import crosscorrDialog
 
-class MplCanvas(FigureCanvas): #Custom canvas to be able to have in GUI plots
+class MplCanvas(FigureCanvas):
+    """Class so that Matplotlib figures can displayed in the GUI"""
     def __init__(self, parent=None, width=5, height=4, dpi=100, size=1):
         self.fig = Figure(figsize=(width, height), dpi=dpi)
         self.axs=[self.fig.add_subplot(size,1,1)]
         [self.axs.append(self.fig.add_subplot(size,1,ii+2,sharex=self.axs[0],sharey=self.axs[0])) for ii in range(size-1)]
         super(MplCanvas, self).__init__(self.fig)
 
-class stdfigure(FigureCanvas): #Dummy class to be able to handle out of GUI plots the same as in GUI plots.
+class stdfigure(FigureCanvas):
+    """Dummy class to be able to handle out of GUI plots the same as in GUI plots."""
     pass
 
 def CreateCanvas(pltsize, pltext=False):
+    """
+    Function to create a canvas in which the Matplotlib plot will be plotted.
+
+    Parameters
+    ----------
+    pltsize : int
+        How many subplots there should be.
+    pltext : bool, optional
+        Defines if the plot will be plotted externally or internaly in the GUI. The default is False.
+
+    Returns
+    -------
+    widget : QWidget
+        Widget containing the canvas.
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
+    """
     if pltext:
         canvas=stdfigure()
         canvas.fig, canvas.axs=plt.subplots(pltsize,sharex=True,sharey=True)
@@ -66,6 +88,24 @@ def CreateCanvas(pltsize, pltext=False):
     return widget, canvas
 
 def addcanvas(self, widget, canvas, title, tab, file):
+    """
+    Function to add a widget containing a canvas to the GUI
+
+    Parameters
+    ----------
+    widget : QWidget
+        Widget containing the canvas.
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    title : string
+        Short description of the plot type.
+    tab : string
+        Name of the tab.
+    file : string
+        Name of the origin file of the data.
+
+    """
     self.canvassen.append([canvas, title, file])
     if widget:
         self.canvasboxes.append(widget)
@@ -74,7 +114,44 @@ def addcanvas(self, widget, canvas, title, tab, file):
     else:
         canvas.fig.show()
 
+def FindMarkers(markerdata, markers, framerate):
+    """
+    Function to extract markers from an EEG marker channel
+    
+    NOTE: The channel needs to be noise free
+
+    Parameters
+    ----------
+    markerdata : list
+        List containing the data points of the marker channel.
+    markers : defaultdict
+        Defaultdict containing marker times per marker.
+    framerate : int
+        Framerate of the markerdata.
+
+    Returns
+    -------
+    markers : defaultdict
+        Defaultdict containing marker times per marker.
+
+    """
+    startsearch=True
+    for ii, value in enumerate(markerdata):
+        if startsearch and value!=0:
+            markers[str(value)].append(ii/framerate)
+            startsearch=False
+        elif value==0:
+            startsearch=True
+    return markers
+
 def ViewWhole(self):
+    """
+    Function to create and add a canvas of the whole recording to the GUI.
+    The whole recording is meant to display all the data and the time frames, thresholds, and cut-off threshold.
+    
+    NOTE: The whole recording plot will always be displayed in the GUI and can therefor not be automatically saved.
+
+    """
     file=str(self.comb_file.currentText())
     #if ".wav" not in str(self.comb_file.currentText()):
     #    return
@@ -87,6 +164,11 @@ For example:
 Note that the extensions .wav and .txt are not always visible depending on your system settings. If you do not see them, you can ignore them.""")
     if ".mat" in str(self.comb_file.currentText()):
         self.framerate, _=QInputDialog.getInt(self,"Framerate","Enter the framerate (Hz) of the recording:", 500, 1)
+        markerchannel, _=QInputDialog.getInt(self,"Marker channel","Enter the channel used for markers. If there is none, fill in 0:", 0, 0, len(self.data))
+        if markerchannel:
+            markerdata=self.data[markerchannel-1]
+            self.data=np.delete(self.data, markerchannel-1, axis=0)
+            self.markers=FindMarkers(markerdata, self.markers, self.framerate)
         self.time=np.array([x/self.framerate for x in np.arange(np.size(self.data, 1))]) # in seconds
     self.data=self.filter_data(self.data, self.framerate, low=self.lowpass, high=self.highpass, notch=self.notchv, order=2, notchfilter=self.notchfilter, bandfilter=self.bandfilter)
     if self.cb_flipdata.isChecked():
@@ -102,6 +184,15 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     channels=[ii+1 for ii in range(channelc)]
     widget, canvas=CreateCanvas(len(self.data))
     canvas=PlotWholeRecording(canvas, self.data, self.markers, self.time, self.colorSTR, channels=channels, title=f"{file}: Whole")
+    for ii,ch in enumerate(self.data):
+        m = ch.mean(0)
+        sd = ch.std(axis=0, ddof=0)
+        SNR=abs(np.where(sd == 0, 0, m/sd))
+        SNRtxt=Decimal(str(SNR))
+        SNRtxt=SNRtxt.quantize(Decimal('0.0001'), ROUND_HALF_UP) #Proper rounding
+        xlim=max(canvas.axs[ii].get_xlim())
+        ylim=max(canvas.axs[ii].get_ylim())
+        canvas.axs[ii].text(0.9*xlim,0.9*ylim,f'SNR: {SNRtxt}')
     self.InfoMsg("Plot Created.", f"Filename {str(self.comb_file.currentText())}")
     self.canvassen.append([canvas, "Whole", file])
     self.canvasboxes.append(widget)
@@ -110,6 +201,16 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     self.statusBar.showMessage('Finished')
     
 def RunSorting(self, spikesort=False):
+    """
+    Function to run the analysis. Creates all selected plots and data required.
+
+    Parameters
+    ----------
+    spikesort : bool, optional
+        Determines if the SpikeSorting function should be ran (see SpikeFunctions.py).
+        Will be set to True automatically if it is needed. The default is False.
+
+    """
     file=str(self.comb_file.currentText())
     if file=="Select file":
         self.ErrorMsg("Please select a datafile")
@@ -142,6 +243,11 @@ def RunSorting(self, spikesort=False):
     self.data,self.markers,self.time,self.framerate,nomarker=OpenRecording(f"{os.getcwd()}/data", str(self.comb_file.currentText()))
     if ".mat" in str(self.comb_file.currentText()):
         self.framerate, _=QInputDialog.getInt(self,"Framerate","Enter the framerate (Hz) of the recording:", 500, 1)
+        markerchannel, _=QInputDialog.getInt(self,"Marker channel","Enter the channel used for markers. If there is none, fill in 0:", 0, 0, len(self.data))
+        if markerchannel:
+            markerdata=self.data[markerchannel-1]
+            self.data=np.delete(self.data, markerchannel-1, axis=0)
+            self.markers=FindMarkers(markerdata, self.markers, self.framerate)
         self.time=np.array([x/self.framerate for x in np.arange(np.size(self.data, 1))]) # in seconds
     if self.cb_flipdata.isChecked():
         self.data=self.data*-1
@@ -208,7 +314,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
                 widget, canvas=CreateCanvas(1, pltext)
                 widgets.append(widget)
                 canvasses.append(canvas)
-        canvasses, clus=AverageWaveForm(canvasses, self.framerate, self.clusters, self.DataSelection, channels=channels, title=f"{file}: Average")
+        canvasses, clus=AverageWaveForm(canvasses, self.clusters, self.framerate, self.DataSelection, channels=channels, title=f"{file}: Average")
         for ii, canvas in enumerate(canvasses):
             addcanvas(self, widgets[ii], canvas, "AWave", f"{file}: {clus[ii]}", file)
         currprog+=1
@@ -236,7 +342,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
                 widget, canvas=CreateCanvas(1, pltext)
                 widgets.append(widget)
                 canvasses.append(canvas)
-        canvasses, clus=AutoCorrelation(canvasses, self.clusters, self.framerate, self.colorSTR, intervalsize=5, channels=channels)
+        canvasses, clus=AutoCorrelation(canvasses, self.clusters, self.framerate, self.colorSTR, intervalsize=2, channels=channels)
         for ii, canvas in enumerate(canvasses):
             addcanvas(self, widgets[ii], canvas, "Autocorr", f"{file}: Autocorrelogram {clus[ii]}", file)
         currprog+=1
@@ -261,7 +367,7 @@ Note that the extensions .wav and .txt are not always visible depending on your 
         #Window to ask for which clusters to compare; likely in format of drop down boxes or int invul
         x1=self.x1
         x2=self.x2
-        canvas, tabtitle=CrossCorrelation(canvas, self.clusters, self.framerate, self.colorSTR, intervalsize=5, x1=x1, x2=x2)
+        canvas, tabtitle=CrossCorrelation(canvas, self.clusters, self.framerate, self.colorSTR, intervalsize=2, x1=x1, x2=x2)
         #Edit tab title to include cluster threshold instead of index
         addcanvas(self, widget, canvas, "Crosscorr", f"{file}: {tabtitle}", file)
         currprog+=1
@@ -284,16 +390,26 @@ Note that the extensions .wav and .txt are not always visible depending on your 
     self.statusBar.showMessage('Finished')
 
 def GetTab(self):
+    """
+    Function to get the tab index of the whole recording of the selected the file.
+
+    Returns
+    -------
+    indx : int
+        Index of the whole recording tab that corresponds to the selected file.
+
+    """
     text=str(self.comb_file.currentText())
-    for ii, canvas in enumerate(self.canvassen):
-        if self.plt_container.tabText(ii).split(":")[0]==text:
-            return ii
-    for ii in reversed(range(len((self.canvassen)))):
-        if "Whole" in self.canvassen[ii][1]:
-            return ii
+    for indx, canvas in enumerate(self.canvassen):
+        if self.plt_container.tabText(indx).split(":")[0]==text:
+            return indx
+    for indx in reversed(range(len((self.canvassen)))):
+        if "Whole" in self.canvassen[indx][1]:
+            return indx
     return -1
     
 def ThresholdChange(self):
+    """Function to remove old thresholds and add the filled in threshold(s) to the whole recording plot."""
     #Remove old thresholds
     ncnvs=GetTab(self)
     if ncnvs==-1: return
@@ -324,6 +440,7 @@ def ThresholdChange(self):
     if error: self.WarningMsg("Not all thresholds were convertable to integers.",f"Marker {error[0]}\n{error[1]}")
 
 def CutoffChange(self):
+    """Function to remove the old cut-off threshold and add the filled in cut-off threshold to the whole recording plot."""
     #Remove old cut off threshold
     ncnvs=GetTab(self)
     if ncnvs==-1: return
@@ -341,6 +458,7 @@ def CutoffChange(self):
     self.canvassen[ncnvs][0].draw_idle()
     
 def IntervalChange(self):
+    """Function to remove the old time intervals and add the filled in time intervals to the whole recording plot."""
     #Remove old cut off threshold
     ncnvs=GetTab(self)
     for interval in self.intervals:
@@ -384,25 +502,80 @@ def IntervalChange(self):
     self.canvassen[ncnvs][0].draw_idle()
 
 def UpdateWholePlot(self):
+    """Function to update time intervals, threshold, and cut-off threshold in the whole recording plot."""
     ThresholdChange(self)
     CutoffChange(self)
     IntervalChange(self)
 
 def SavePlots(self):
-    #Get data, save everything, then close all plots
+    """
+    Function to run the RunSorting function, see modules/GUI/GUIFunctions. Data is saved to the /saved directory.
+    
+    NOTE: The whole recording plot needs to be manually saved by pressing the save button in the top left of the plot.
+
+    """
+    #Close all plots
     self.closePlots()
+    #Set external plots to True, otherwise they cannot be saved
     self.cb_externalplot.setChecked(True)
+    #Add a whole recording plot and update it with the time intervals, thresholds, and cut-off threshold
     ViewWhole(self)
     ThresholdChange(self)
     CutoffChange(self)
     IntervalChange(self)
+    #Run the sorting function
     self.RunSorting(self)
+    #Get the channels, then save everything to files in the /saved directory.
     channels=[int(chan.split("Channel ")[-1]) for chan in str(self.ccb_channels.currentText()).split(", ")]
-    SaveAll(self.clusters, self.erpsignal, self.xlim[0], self.xlim[1], f"{os.getcwd()}/saved", str(self.le_outputname.text()),self.cutoff_thresh, channels)
+    output=str(self.le_outputname.text())
+    folder=f"{os.getcwd()}/saved"
+    cancelsave=False
+    #While loop to catch unintended overwriting of files
+    fileoverwrite=True
+    while fileoverwrite:
+        fileoverwrite=False
+        for jj,chan in enumerate(self.clusters):
+            for ii,cl in enumerate(chan):
+                path=os.path.join(folder,f'spiketimes_{output}_channel{channels[jj]}_cluster{ii+1}.csv')
+                if os.path.isfile(path):
+                    fileoverwrite=True
+        path=os.path.join(folder,f"Plots_{output}.pdf")
+        if os.path.isfile(path):
+            fileoverwrite=True
+        if self.erpsignals:
+            for ii,ch in enumerate(self.erpsignals):
+                path=os.path.join(folder,f'ERP_{output}_channel{channels[ii]}.csv')
+                if os.path.isfile(path):
+                    fileoverwrite=True
+        if fileoverwrite:
+            output, ok=QInputDialog.getText(self, f'File with output output: "{output}" already exists',
+                                            "Enter new output name or press cancel to cancel running.\nLeave the output the same to overwrite.", f'{output}')
+            fileoverwrite=False
+            if not ok:
+                cancelsave=True
+    if cancelsave: return
+    SaveAll(self.clusters, self.erpsignal, self.xlim[0], self.xlim[1], folder, output,self.cutoff_thresh, channels)
     self.InfoMsg(f'Files for {str(self.le_outputname.text())} {channels} saved.', f'Files can be found at {os.getcwd()}/saved')
-    #plt.close('all')
 
 def gettimestamps(self, times):
+    """
+    Function to convert markers to its timestamps.
+    
+    NOTE: will always take the first timestamp of a marker if it has multiple. 
+
+    Parameters
+    ----------
+    times : list
+        List containing the strings per time interval.
+
+    Returns
+    -------
+    start_time : list
+        List of all the start times of the chosen time frames.
+    stop_time : list
+        List of all the stop times of the chosen time frames.
+
+    """
     for ii,th in enumerate(times):
         for jj,art in enumerate(th):
             #If marker then use maker time, otherwise convert string to float

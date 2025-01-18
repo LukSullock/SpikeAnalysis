@@ -89,6 +89,7 @@ class BatchWidget(QWidget):
         self.btn_savebatch.clicked.connect(lambda: SaveBatch(self, parent))
 
     def retranslateUi(self, parent):
+        """Adds text, tooltips, etc. to the UI"""
         self.setWindowTitle(QCoreApplication.translate("Form", u"Form", None))
         self.lbl_chtime.setText(QCoreApplication.translate("Form", u"Channel and timeframe", None))
         self.lbl_thresholds.setText(QCoreApplication.translate("Form", u"Thresholds", None))
@@ -118,6 +119,20 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
                 
             
     def checks(self,parent):
+        """
+        Function to check if all the mandatory variables are filled in.
+
+        Parameters
+        ----------
+        parent : class
+            Reference to the main GUI.
+
+        Returns
+        -------
+        channels : string
+            Returns False if a check is not met, otherwise returns the string of the selected channels.
+
+        """
         file=str(parent.comb_file.currentText())
         if file=="Select file":
             parent.ErrorMsg("Please select a datafile")

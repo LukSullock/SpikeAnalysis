@@ -101,6 +101,7 @@ def PlotDataFigure(canvas, data, time, xlabel="", ylabel="", color="k", *, legen
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
     """
     #Set title
     canvas.fig.suptitle(title)
@@ -170,6 +171,7 @@ def PlotHistFigure(canvas, data, bins, weights, xlabel="", ylabel="", *, legend=
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
     """
     canvas.fig.suptitle(title)
     for ii, chan in enumerate(data):
@@ -210,6 +212,7 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], t
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
     """
     colors=itertools.cycle(colorSTR)
     vlines=[]
@@ -222,7 +225,41 @@ def PlotWholeRecording(canvas, data, markers, time, colorSTR, *, channels=[1], t
     canvas=PlotDataFigure(canvas, data, time, "Time (s)", "Amplitude (a.u.)", "k", colorcycle=colors, vlines=vlines, title=f"{title} recording (ch{channels})")
     return canvas
 
-def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, cutoff=[], thresholdsSTR="", *, channels=[1], title="Partial"):
+def PlotPartial(canvas, markers, DataSelection, time, xlim, colorSTR, cutoff=[], thresholdsSTR="", *, channels=[1], title="Partial"):
+    """
+    Function to create a plot of the selected time frames
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    time : Array of float64
+         Array containing x-values per channel. First index is channel, second contains x-values.
+    DataSelection : list
+         A list containing the signal data in the selected time frames per channel.
+    xlim : list, optional
+         List of a list of start times and a list of stop times for the time frames. x limit will be set from the first start value to the last stop value.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    cutoff : list, optional
+        List with the cutoff value. The default is [].
+    thresholdsSTR : TYPE, optional
+        String containing all the thresholds as integers. The default is "".
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Spike".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
+    """
     if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
     thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR) if th] #regular expression to filter out all numbers and convert each to int
     thresholds=list(set(thresholdstmp))
@@ -244,6 +281,38 @@ def PlotPartial(canvas, markers,DataSelection,time,xlim,colorSTR, cutoff=[], thr
     return canvas
 
 def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, cutoff=[], *, channels=[1], title="Spike"):
+    """
+    Function to create a plot showing the detected spikes.
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    time : Array of float64
+         Array containing x-values per channel. First index is channel, second contains x-values.
+    DataSelection : list
+         A list containing the signal data in the selected time frames per channel.
+    xlim : list, optional
+         List of a list of start times and a list of stop times for the time frames. x limit will be set from the first start value to the last stop value.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    cutoff : list, optional
+        List with the cutoff value. The default is [].
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Spike".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
+    """
     colors=itertools.cycle(colorSTR)
     # Last, create the plot which indicates which spike belongs to which cluster
     if cutoff:
@@ -251,7 +320,35 @@ def SpikeDetection(canvas, clusters, time, DataSelection, xlim, colorSTR, cutoff
     canvas=PlotDataFigure(canvas, DataSelection, time, "Time (s)", "Amplitude (a.u.)", "k", hlines=cutoff, legend=[[f"T{clus[4][9:]}" for clus in ch] for ch in clusters], scatterpoints=clusters, xlim=xlim, colorcycle=colors, title=f"{title} sorting (ch{channels})")
     return canvas
 
-def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[1], title="Average"):
+def AverageWaveForm(canvasses, clusters, framerate, DataSelection, *, channels=[1], title="Average"):
+    """
+    Function to create plots for the average waveform per cluster per channel
+
+    Parameters
+    ----------
+    canvassen : list
+        A list of figures in which the data will be plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    framerate : int
+        Sampling rate of the data.
+    DataSelection : list
+        A list containing the signal data in the selected time frames per channel.
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set a part of the title of the figure. The default is "Average".
+
+    Returns
+    -------
+    canvassen : list
+        List of the figures in which the data has been plotted.
+        canvassen[N].fig is a matplotlib figure and canvassen[N].axs is a list of matplotlib axes.
+    clus : list
+        A list of the channels and clusters per plot.
+
+    """
     min_val = 5 # time in ms
     max_val = 10 # time in ms
     wvf_x = np.arange(-min_val, max_val, 1/framerate*1000) # time in ms
@@ -288,6 +385,32 @@ def AverageWaveForm(canvasses, framerate, clusters, DataSelection, *, channels=[
     return canvasses, clus
 
 def InterSpikeInterval(canvas, clusters, framerate, colorSTR, *, channels=[1], title="Interspike"):
+    """
+    Function to create a plot for interspike interval
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    framerate : int
+        Sampling rate of the data.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Distribution".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
+    """
     colors=itertools.cycle(colorSTR)
     #Extract timestamps of spikes and convert them to milliseconds
     spike_times=[[[[x*1000 for x in cl[1]],cl[4]] for cl in chan] for chan in clusters]
@@ -311,6 +434,32 @@ def InterSpikeInterval(canvas, clusters, framerate, colorSTR, *, channels=[1], t
     return canvas
 
 def AmplitudeDistribution(canvas, clusters, framerate, colorSTR, *, channels=[1], title="Distribution"):
+    """
+    Function for creating a plot for amplitude distribution
+
+    Parameters
+    ----------
+    canvas : class
+        The figure in which the data is plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    framerate : int
+        Sampling rate of the data.
+    colorSTR : dict, list, string
+        Series of color values to cycle between.
+    channels : list, optional
+        List of channel numbers. The default is [1].
+    title : string, optional
+        String to set as title of the figure. The default is "Distribution".
+
+    Returns
+    -------
+    canvas : class
+        The figure in which the data has been plotted.
+        canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
+    """
     colors=itertools.cycle(colorSTR)
     #Extract peak heights
     spike_amp_cl = [[[cl[2], cl[4]] for cl in chan] for chan in clusters] # spike amplitude in arbitrary units (a.u.)
@@ -361,6 +510,7 @@ def AutoCorrelation(canvassen, clusters, framerate, colorSTR, intervalsize=5, *,
         canvassen[N].fig is a matplotlib figure and canvassen[N].axs is a list of matplotlib axes.
     clus : list
         A list of the channels and clusters per plot.
+
     """
     colors=itertools.cycle(colorSTR)
     #Extract timestamps of spikes and convert to location
@@ -418,16 +568,17 @@ def CrossCorrelation(canvas, clusters, framerate, colorSTR, intervalsize=5, x1=[
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
     """
     colors=itertools.cycle(colorSTR)
     #Extract timestamps of spikes and convert to location
     spike_times=[[[[int(x*framerate) for x in cl[1]],cl[4]] for cl in chan] for chan in clusters]
     if type(x1[0])==str:
         spikeset1=[spike*framerate for spike in x1[1]]
-        tabtitle=f"{title} ({x1[0]}, (ch{x2[0]} {clusters[x2[0]][x2[1]][4]})"
+        tabtitle=f"{title} (ch{x1[0]+1}, ch{x2[0]+1} {clusters[x2[0]][x2[1]][4]})"
     else:
         spikeset1=spike_times[x1[0]][x1[1]][0]
-        tabtitle=f"{title} (ch{x1[0]} {clusters[x1[0]][x1[1]][4]}, (ch{x2[0]} {clusters[x2[0]][x2[1]][4]})"
+        tabtitle=f"{title} (ch{x1[0]+1} {clusters[x1[0]][x1[1]][4]}, ch{x2[0]+1} {clusters[x2[0]][x2[1]][4]})"
     spikeset2=spike_times[x2[0]][x2[1]][0]
     crosscorr=cross_correlation(spikeset1, spikeset2, intervalsize*1000)
     canvas=PlotDataFigure(canvas, [crosscorr], np.arange(-crosscorr.size/2, crosscorr.size/2)+0.5,
@@ -459,6 +610,7 @@ def Spectrogram(canvas, data, framerate, time, *, channels=[1], title="Spectrogr
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+
     """
     canvas.fig.suptitle(f"{title} (ch{channels})")
     for ii,chan in enumerate(data):
@@ -498,6 +650,9 @@ def ERPplots(canvas, data, markers, framerate, colorSTR, xmin=1, xmax=5, *, chan
     canvas : class
         The figure in which the data has been plotted.
         canvas.fig is a matplotlib figure and canvas.axs is a list of matplotlib axes.
+    erpsignals : list
+        List containing a dict with the average ERP signal for every marker per channel.
+
     """
     colors=itertools.cycle(colorSTR)
     mf_x = np.arange(-xmin, xmax, 1/framerate) # time in s

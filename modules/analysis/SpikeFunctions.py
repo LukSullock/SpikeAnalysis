@@ -35,6 +35,31 @@ from modules.analysis.SpikeSorter import find_peaks
 
     
 def OpenRecording(folder, filename):
+    """
+    Function to load in data and markers.
+    Accepted filenames are .mat, .wav, and .npz.
+
+    Parameters
+    ----------
+    folder : String
+        String of the folder path from where to load the file.
+    filename : String
+        String of the filename including extension.
+
+    Returns
+    -------
+    data : Array of int64
+        Array containing y-values per channel.
+    markers : defaultdict
+        Dictionary with marker numbers as keys, and marker time stamps as values.
+    time : Array of float64
+        Array containing x-values per channel. First index is channel, second contains x-values.
+    framerate : int
+        Sampling rate of the data.
+    nomarker : list
+        Contains the FileNotFoundError traceback if there was no marker file found.
+
+    """
     #import .wav file and corresponding marker file
     file = os.path.join(folder, filename)
     markername =f"{filename[:-4]}-events.txt"
@@ -73,8 +98,29 @@ def OpenRecording(folder, filename):
     
 def DataSelect(data,markers,framerate,times):
     """
-    Create a selection of the data, if no input was given,
-    default to whole recording.
+    Function to create a selection of the data.
+    If no input was given, default to whole recording.
+
+    Parameters
+    ----------
+    data : Array of int64
+        Array containing y-values per channel.
+    markers : defaultdict
+        Dictionary with marker numbers as keys, and marker time stamps as values.
+    framerate : int
+        Sampling rate of the data.
+    times : String
+        String containing time frames. Different time frames should be seperated by 'and'.
+
+    Returns
+    -------
+    [start_time,stop_time] : list
+        A list containing all the start times and stop times of the individual time frames.
+    DataSelection : list
+        A list containing the signal data in the selected time frames per channel.
+    markers : defaultdict
+        Dictionary with marker numbers as keys, and marker time stamps as values.
+
     """
     #Get time frames
     times=times.split(" and ")
@@ -120,7 +166,31 @@ def DataSelect(data,markers,framerate,times):
     return [start_time,stop_time],DataSelection,markers
 
 
-def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_thresh):
+def SpikeSorting(DataSelection,thresholdsSTR,subthresh,framerate,time, cutoff_thresh):
+    """
+    Function to sort spikes based on thresholds
+
+    Parameters
+    ----------
+    DataSelection : list
+        A list containing the signal data in the selected time frames per channel.
+    thresholdsSTR : TYPE
+        String containing all the thresholds as integers.
+    subthresh : float
+        Float determining how far the signal needs to go below the threshold before searching for a new spike.
+    framerate : int
+        Sampling rate of the data.
+    time : Array of float64
+        Array containing x-values per channel. First index is channel, second contains x-values.
+    cutoff_thresh : list
+        List with the cutoff value. The default is [].
+
+    Returns
+    -------
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+
+    """
     if len(thresholdsSTR)==0: thresholdsSTR="1" #Default value if no threshold is given
     thresholdstmp=[int(th) for th in re.split(r"\b\D+", thresholdsSTR) if th] #regular expression to filter out all numbers and convert each to int
     thresholds=list(set(thresholdstmp))
@@ -132,7 +202,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_t
         for ii in range(len(DataSelection)):
             th = cutoff_thresh[0]
             #cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
-            cutoff1[ii], _ = find_peaks(DataSelection[ii], threshold=th, subthresh=refractair)
+            cutoff1[ii], _ = find_peaks(DataSelection[ii], threshold=th, subthresh=subthresh)
         
     cl2=[[] for _ in range(len(DataSelection))]
     maxval=[[] for _ in range(len(DataSelection))]
@@ -149,7 +219,7 @@ def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_t
         # Then, detect the other spikes per cluster, 'Cluster #'
         for clusterN,th in enumerate(thresholds):
             #clusters[ii][clusterN][0] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
-            clusters[ii][clusterN][0],_ = find_peaks(DataSelection[ii], threshold=th, subthresh=refractair)
+            clusters[ii][clusterN][0],_ = find_peaks(DataSelection[ii], threshold=th, subthresh=subthresh)
             for peakN,x in enumerate(clusters[ii][clusterN][0][0]):
                 if x not in cutoff1[ii][0] and not any(x in clusters[ii][jj][0][0] for jj in range(clusterN)):
                     clusters[ii][clusterN][1].append(x/framerate)
@@ -159,11 +229,34 @@ def SpikeSorting(DataSelection,thresholdsSTR,refractair,framerate,time, cutoff_t
             clusters[ii][clusterN][3] = np.ones(len(clusters[ii][clusterN][1] ))*maxval[ii]+(maxval[ii]/10*(clusterN+1))
     return clusters
 
-def SaveAll(clusters, erpsignals,start_time,stop_time,folder,output,cutoff_thresh, channels):
-    #For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
-    #Save files in path where main file is located
-    #1 csv file per cluster and 1 pdf file with all plots
-    #NOTE: there is no check for duplicate file names, old files will be overridden
+def SaveAll(clusters, erpsignals, start_time, stop_time, folder, output, cutoff_thresh, channels):
+    """
+    For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
+    Files are saved in the /saved directory in the path where main file is located
+    1 csv file per cluster and 1 pdf file with all plots
+    
+    NOTE: Check for overwriting files does not happen in this function, but in the SavePlots function, see modules/GUI/GUIFunctions.
+
+    Parameters
+    ----------
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
+    erpsignals : list
+        List containing a dict with the average ERP signal for every marker per channel.
+    start_time : list
+        List containing the start times of every time frame.
+    stop_time : list
+        List containing the stop times of every time frame.
+    folder : String
+        String of the folder path from where to save the file.
+    output : string
+        String containing the file identifier, which is included in every filename.
+    cutoff_thresh : list
+        List with the cutoff value. The default is [].
+    channels : list
+        List of channel numbers.
+
+    """
     for jj,chan in enumerate(clusters):
         for ii,cl in enumerate(chan):
             oridf=pd.DataFrame({cl[4]: cl[1]})
@@ -184,6 +277,3 @@ def SaveAll(clusters, erpsignals,start_time,stop_time,folder,output,cutoff_thres
         for ii,ch in enumerate(erpsignals):
             df=pd.DataFrame(ch)
             df.to_csv(os.path.join(folder,f'ERP_{output}_channel{channels[ii]}.csv'),index=False)
-
-
-

@@ -25,11 +25,12 @@ from PyQt5.QtGui import (QStandardItem, QBrush, QColor)
 from PyQt5.QtWidgets import (QCheckBox, QComboBox, QGridLayout, QMenu,
                         QLabel, QLineEdit, QMenuBar, QPushButton, QAction,
                         QSizePolicy, QSpacerItem, QSpinBox, QTabWidget,
-                        QWidget, QApplication,QMainWindow, QDoubleSpinBox,
-                        QScrollArea, QFrame, QStatusBar, QProgressBar,
-                        QDialog, QDialogButtonBox, QFormLayout)
+                        QWidget, QDoubleSpinBox, QScrollArea, QFrame, QStatusBar,
+                        QProgressBar, QDialog, QDialogButtonBox, QFormLayout)
 
+#Custom widget based on QComboBox, so that multiple items can be selected, which is needed for channel selection
 class CheckableComboBox(QComboBox):
+    #From https://www.youtube.com/watch?v=WnHkx-AvTBA
     def __init__(self):
         super().__init__()
         self.setEditable(True)
@@ -44,6 +45,7 @@ class CheckableComboBox(QComboBox):
         self.model().dataChanged.connect(self.updateLineEditField)
     
     def eventFilter(self, widget, event):
+        """Filter out events for clicking on items and scrolling for opening and closing the dropdown list and selecting items."""
         if widget==self.lineEdit():
             if event.type()==QEvent.Type.MouseButtonRelease:
                 if self.closeOnLineEditClick:
@@ -68,6 +70,7 @@ class CheckableComboBox(QComboBox):
             return super().eventFilter(widget, event)
     
     def updateLineEditField(self):
+        """After selecting or deselecting an item, update the line edit field to display the selected items"""
         text_container=[]
         for ii in range(self.model().rowCount()):
             if self.model().item(ii).checkState()==Qt.CheckState.Checked:
@@ -78,6 +81,7 @@ class CheckableComboBox(QComboBox):
         self.lineEdit().setText(text_string)
     
     def addItems(self, items, itemList=None):
+        """Function to add multiple items to the combobox list. Calls addItem for each item in the parameter items"""
         for ii, text in enumerate(items):
             try:
                 data=itemList[ii]
@@ -86,6 +90,7 @@ class CheckableComboBox(QComboBox):
             self.addItem(text, data)
         
     def addItem(self, text, userData=None):
+        """Adds an item to the combobox list"""
         item=QStandardItem()
         item.setText(text)
         if userData:
@@ -96,6 +101,7 @@ class CheckableComboBox(QComboBox):
         self.model().appendRow(item)
         self.updateLineEditField()
 
+#QDialog based widget to set filters
 class FilterDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__()
@@ -140,6 +146,7 @@ class FilterDialog(QDialog):
         self.save.clicked.connect(self.SaveSignal)
     
     def SaveSignal(self):
+        """Filter and then save the signal with the chosen filters in the /data directory"""
         datafilt=self.parent.filter_data(self.parent.data, self.parent.framerate,
                             low=self.low.value(), high=self.high.value(), 
                             notch=self.notch.value(), order=2, 
@@ -164,6 +171,7 @@ class FilterDialog(QDialog):
         
     
     def CheckAll(self, sender):
+        """Function to have both the lower and higher limit of the bandpass filter checked or unchecked"""
         check=bool(sender)
         self.cb_low.stateChanged.disconnect()
         self.cb_high.stateChanged.disconnect()
@@ -173,6 +181,7 @@ class FilterDialog(QDialog):
         self.cb_high.stateChanged.connect(self.CheckAll)
         
     def getInputs(self):
+        """Function to save the filter settings in the main GUI."""
         if self.cb_low.isChecked():
             self.parent.bandfilter=True
             self.parent.lowpass=self.low.value()
@@ -182,6 +191,7 @@ class FilterDialog(QDialog):
             self.parent.notchv=self.notch.value()
         self.close()
     
+#QDialog based widget for selecting the clusters to be compared in the cross-correlogram
 class crosscorrDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__()
@@ -213,18 +223,21 @@ class crosscorrDialog(QDialog):
         self.channelChange2()
         
     def channelChange1(self):
+        """If a channel was selected, add the clusters of the channel to the corresponding cluster selection QComboBox"""
         channelindx=self.channel1.currentIndex()
         for ii in reversed(range(self.cluster1.count())):
             self.cluster1.removeItem(ii)
         if "Channel" in self.channel1.currentText():
             self.cluster1.addItems(self.clusters[channelindx])
     def channelChange2(self):
+        """Adds the clusters of the channel to the corresponding cluster selection QComboBox"""
         channelindx=self.channel1.currentIndex()
         for ii in reversed(range(self.cluster2.count())):
             self.cluster2.removeItem(ii)
         self.cluster2.addItems(self.clusters[channelindx])
         
     def getInputs(self):
+        """Save the selected clusters and/or markers to the main GUI."""
         if "Channel" in self.channel1.currentText():
             self.parent.x1=[self.channel1.currentIndex(), self.cluster1.currentIndex()]
         elif "Marker" in self.channel1.currentText():
@@ -236,6 +249,7 @@ class crosscorrDialog(QDialog):
         
 class Ui_MainWindow(object):
     def openFilterDialog(self):
+        """Function to open the filter dialog"""
         try:
             self.filtdialog=FilterDialog(self)
         except:
@@ -243,6 +257,7 @@ class Ui_MainWindow(object):
         self.filtdialog.show()
         
     def setupUi(self, MainWindow):
+        """Set up the main GUI widgets"""
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
         MainWindow.resize(1000, 800)
@@ -457,6 +472,7 @@ class Ui_MainWindow(object):
         QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
+        """Adds text, tooltips, etc. to the UI"""
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
         self.cb_selectedframes.setText(QCoreApplication.translate("MainWindow", u"Selected time frames", None))
         self.lbl_output.setText(QCoreApplication.translate("MainWindow", u"Output", None))
@@ -518,17 +534,3 @@ u"Format: [Threshold 1], [Threshold 2], [Threshold 3], etc.\n"
         self.lowpass=1
         self.highpass=500
         self.notchv=50
-    
-if __name__ == "__main__":
-    import sys
-    class Main(QMainWindow, Ui_MainWindow):
-        def __init__(self):
-            super(Main, self).__init__()
-            self.setupUi(self)
-            
-        
-    app = QApplication(sys.argv)
-    app.setQuitOnLastWindowClosed(True)
-    ui = Main()
-    ui.show()
-    sys.exit(app.exec())

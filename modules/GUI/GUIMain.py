@@ -88,6 +88,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
     
     def BatchWindow(self):
+        """Function to create an instance of the batch analysis window"""
         try:
            self.batchwidget=BatchWidget(self)
         except:
@@ -95,16 +96,27 @@ class Main(QMainWindow, Ui_MainWindow):
         self.batchwidget.show()
         
     def closeTab(self, indx):
+        """
+        Function to close a specific plot tab
+
+        Parameters
+        ----------
+        indx : int
+            Index of the plot tab that is to be closed.
+
+        """
         self.plt_container.removeTab(indx)
         self.canvassen.pop(indx)
         self.canvasboxes.pop(indx)
     def closePlots(self):
+        """Function to close all plots. Also cleans the lists containing references to the plots and the tab containers"""
         plt.close("all")
         self.canvassen=[]
         self.canvasboxes=[]
         self.plt_container.clear()
     
     def LiveUpdate(self):
+        """Function to switch between live updating of the whole recording plot and manual updating."""
         if self.actionLivePlot.isChecked():
             self.le_timeinterval.returnPressed.disconnect()
             self.le_thresholds.returnPressed.disconnect()
@@ -123,6 +135,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.sb_cutoff.lineEdit().returnPressed.connect(lambda: self.CutoffChange(self))
     
     def tab_change(self):
+        """Function that sets the chosen file when a tab is changed."""
         indx=self.plt_container.currentIndex()
         file=self.plt_container.tabText(indx).split(":")
         if file[0]:
@@ -135,6 +148,7 @@ class Main(QMainWindow, Ui_MainWindow):
                     self.ccb_channels.addItems([f"Channel {ii+1}" for ii in range(len(self.canvassen[indx][0].axs))])
     
     def deselect_select_all(self):
+        """Function that checks if all analysis checkboxes are selected, if so then it checks or unchecks the select all checkbox."""
         self.cb_selectall.stateChanged.disconnect(self.select_all)
         if all([self.cb_rawrecording.isChecked(), self.cb_selectedframes.isChecked(), 
                self.cb_spikesorting.isChecked(), self.cb_averagewaveform.isChecked(),
@@ -150,6 +164,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.cb_selectall.setChecked(False)
         self.cb_selectall.stateChanged.connect(self.select_all)
     def select_all(self):
+        """Function to select or deselect all analysis checkboxes"""
         state=self.cb_selectall.isChecked()
         self.cb_rawrecording.setChecked(state)
         self.cb_selectedframes.setChecked(state)
@@ -163,6 +178,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_erp.setChecked(state)
         
     def CheckFiles(self):
+        """Function to update the file combobox with all available datafiles"""
         #Update combobox with file options
         files=os.listdir("data")
         for ii in reversed(range(len(files))):
@@ -178,11 +194,17 @@ class Main(QMainWindow, Ui_MainWindow):
             self.comb_file.addItems(files)
         self.OutputNameChange()
     def dataloadplot(self):
+        """Function that runs the ViewWholePlot function when a different file is selected."""
         if self.text!=str(self.comb_file.currentText()):
             self.text=f'{str(self.comb_file.currentText())}'
             if ".wav" in self.text or ".mat" in self.text or ".npz" in self.text:
                 self.viewWhole(self)
     def OutputNameChange(self):
+        """
+        Function to set the current output text to the filename without extension.
+        Also adds the condition to it if the condition line edit is filled in.
+
+        """
         if ".wav" not in str(self.comb_file.currentText()):
             self.le_outputname.setText("")
             return
@@ -194,6 +216,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.le_outputname.setText(text)
     
     def create_filter_window(self):
+        """Function that closes an old instance of the filter window or opens a new instance."""
         if self.activefilter:
             self.activefilter=False
             self.filterwindow.close()
@@ -201,6 +224,17 @@ class Main(QMainWindow, Ui_MainWindow):
         self.filterwindow
     
     def ErrorMsg(self, text, subtext=""):
+        """
+        QMessageBox to display an error.
+
+        Parameters
+        ----------
+        text : string
+            Text to be displayed.
+        subtext : string, optional
+            Subtext to be displayed. The default is "".
+
+        """
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Critical)
         msg.setText(text)
@@ -208,6 +242,17 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.setWindowTitle("Error")
         msg.exec_()
     def WarningMsg(self, text, subtext=""):
+        """
+        QMessageBox to display a warning.
+
+        Parameters
+        ----------
+        text : string
+            Text to be displayed.
+        subtext : string, optional
+            Subtext to be displayed. The default is "".
+
+        """
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Warning)
         msg.setText(text)
@@ -215,6 +260,22 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.setWindowTitle("Warning")
         msg.exec_()
     def WarningContinue(self, text, subtext):
+        """
+        QMessageBox to display a warning and wait for a reply.
+
+        Parameters
+        ----------
+        text : string
+            Text to be displayed.
+        subtext : string, optional
+            Subtext to be displayed. The default is "".
+
+        Returns
+        -------
+        reply : int
+            Integer denoting the type of reply.
+
+        """
         msg=QMessageBox()
         msg.setIcon(QMessageBox.Warning)
         msg.setText(text)
@@ -224,6 +285,17 @@ class Main(QMainWindow, Ui_MainWindow):
         reply=msg.exec_()
         return reply
     def InfoMsg(self, text, subtext=""):
+        """
+        QMessageBox to display some information
+
+        Parameters
+        ----------
+        text : string
+            Text to be displayed.
+        subtext : string, optional
+            Subtext to be displayed. The default is "".
+
+        """
         msg = QMessageBox()
         msg.setIcon(QMessageBox.Information)
         msg.setText(text)
@@ -232,10 +304,20 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.exec_()
         
     def closeEvent(self, event):
+        """
+        Function to close the GUI.
+
+        Parameters
+        ----------
+        event : QCloseEvent
+            The event controlling if the GUI is closed or not.
+
+        """
         plt.close("all")
         event.accept()
 
 def start():
+    """Function to start the GUI"""
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
     ui = Main(RunSortingfnc=GUIFunctions.RunSorting, SavePlotsfnc=GUIFunctions.SavePlots,
