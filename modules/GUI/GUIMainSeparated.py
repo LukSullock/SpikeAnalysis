@@ -330,6 +330,8 @@ class Main(QMainWindow, Ui_MainWindow):
             [axis.remove() for axis in self.cnvs_isi.axs]
             self.cnvs_isi.axs=[]
             #Add markers and channels to cross-correlation tab
+            self.cb_crossch1.clear()
+            self.cb_crossch2.clear()
             self.cb_crossch1.addItems(self.channels)
             self.cb_crossch1.addItems([f'Marker {key}' for key in self.markers.keys()])
             self.cb_crossch2.addItems(self.channels)
@@ -347,8 +349,8 @@ class Main(QMainWindow, Ui_MainWindow):
             print('Data history:')
             [print(his) for his in self.history]
             print()
-            self.btn_import.setStyleSheet(u"background-color: rgb(0, 255, 0);")
-            self.btn_import.setEnabled(True)
+        self.btn_import.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_import.setEnabled(True)
             
     def ApplyFilters(self):
         self.btn_applyfilt.setEnabled(False)

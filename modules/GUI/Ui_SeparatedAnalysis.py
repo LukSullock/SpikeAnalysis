@@ -726,7 +726,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.actionOpen_recording.setText(QCoreApplication.translate("MainWindow", u"Open recording", None))
+        self.actionOpen_recording.setText(QCoreApplication.translate("MainWindow", u"Import data", None))
         self.actionFilter_data.setText(QCoreApplication.translate("MainWindow", u"Filter data", None))
         self.actionData_selection.setText(QCoreApplication.translate("MainWindow", u"Data selection", None))
         self.actionSpike_sorting.setText(QCoreApplication.translate("MainWindow", u"Spike sorting", None))
@@ -769,9 +769,9 @@ class Ui_MainWindow(object):
 "The rows should be the amount of channels and the columns the amount of datapoints per channel.", None))
 #endif // QT_CONFIG(tooltip)
         self.lbl_fileshape.setText("")
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open recording", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Import data", None))
 #if QT_CONFIG(tooltip)
-        self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open recording.\n"
+        self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open a recording.\n"
 "Used to import and view the raw signal data.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
@@ -806,7 +806,7 @@ class Ui_MainWindow(object):
         self.label_17.setToolTip(QCoreApplication.translate("MainWindow", u"Determines steepness of the filter. Higher value can filter unwanted signals better, but requires more computation and can cause phase shifts.\n"
 "Default is 2.", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order (bandpass)", None))
+        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order (high/low/band)", None))
         self.lbl_order.setText("")
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"Quality (notch)", None))
         self.lbl_quality.setText("")
@@ -815,7 +815,7 @@ class Ui_MainWindow(object):
 "Note that after time frames have been applied in data selection, filters are no longer applicable.", None))
 #endif // QT_CONFIG(tooltip)
         self.btn_applyfilt.setText(QCoreApplication.translate("MainWindow", u"Apply filters", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filters", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filter data", None))
 #if QT_CONFIG(tooltip)
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filters.\n"
 "Used for filtering your signal.\n"
