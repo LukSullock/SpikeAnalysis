@@ -28,10 +28,9 @@ if __name__=="__main__":
     curdir=os.path.dirname(os.path.abspath(__file__))
     pardir=os.path.dirname(os.path.dirname(curdir))
     sys.path.append(pardir)
-from modules.GUI.Ui_SeparatedAnalysis import Ui_MainWindow
-from modules.GUI import GUIFunctionsSeparated as GUIFunctions
+from modules.GUI.Ui_SpikeAnalysis import Ui_MainWindow
+from modules.GUI import GUIFunctions
 from modules.analysis import SpikeFunctions
-# from modules.plot import PlotFunctions
  
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self):

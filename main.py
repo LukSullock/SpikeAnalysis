@@ -17,9 +17,7 @@ GNU General Public License for more details.
 You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
-#from modules.GUI.GUIMain import start as Gui
-from modules.GUI.GUIMainSeperated import start as Gui
+from modules.GUI.GUIMain import start as Gui
 
 if __name__=="__main__":
     Gui()
-
