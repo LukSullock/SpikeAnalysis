@@ -23,12 +23,13 @@ import pandas as pd
 import os
 import traceback
 from collections import defaultdict
+from scipy.signal import butter, iirnotch, filtfilt
 
     
 def OpenRecording(folder, filename):
     """
     Function to load in data and markers.
-    Accepted filenames are .wav, and .npz.
+    Accepted file extensions are .wav, and .npz.
 
     Parameters
     ----------
@@ -41,6 +42,8 @@ def OpenRecording(folder, filename):
     -------
     data : Array of int64
         Array containing y-values per channel.
+    clusters : list
+        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
     markers : defaultdict
         Dictionary with marker numbers as keys, and marker time stamps as values.
     time : Array of float64
@@ -59,7 +62,7 @@ def OpenRecording(folder, filename):
         Contains the FileNotFoundError traceback if there was no marker file found.
 
     """
-    #import .wav file and corresponding marker file
+    #Setup file paths and default information
     file = os.path.join(folder, filename)
     markername =f"{filename[:-4]}-events.txt"
     markerfile=os.path.join(folder, markername)
@@ -74,6 +77,7 @@ def OpenRecording(folder, filename):
               "Channels": []
               }
     if ".wav" in filename: #SpikeRecorder Data (Backyard Brains, SpikerBox)
+        #import .wav file and corresponding marker file
         rec = sp.io.wavfile.read(file)
         nomarker=False
         try:
@@ -115,6 +119,7 @@ def OpenRecording(folder, filename):
                     loaddata.append([f'Channel {ii+1}' for ii in range(ch)])
                 else:
                     loaddata.append(defaults[key])
+        #Load data to variables
         datatype=loaddata[0]
         data=loaddata[1]
         markerstmp=loaddata[2]
@@ -130,8 +135,94 @@ def OpenRecording(folder, filename):
             nomarker=False
         else:
             nomarker=True
-        
-    return data, clusters, markers,time,framerate, datatype, history, identifier, channels, nomarker
+    return data, clusters, markers, time, framerate, datatype, history, identifier, channels, nomarker
+
+def bandpassfilter(data, framerate, order, frequencies):
+    """
+    Function to apply a bandpass filter to the given multichannel data.
+
+    Parameters
+    ----------
+    data : list
+        List containing the data per channel.
+    framerate : int
+        Framerate in frames per second.
+    order : int
+        Order of the filter.
+    frequencies : list
+        List containing first the lower, then the upper bound values of the frequencies to keep.
+
+    Returns
+    -------
+    filtdata : list
+        List containing the filtered data per channel.
+
+    """
+    #Nyquist frequency
+    nyq = framerate/2
+    #Calculate bandpass filter coefficients for a matlabstyle iir filter
+    b, a = butter(order, [freq/nyq for freq in frequencies], btype='band')
+    #Apply filter
+    filtdata=[filtfilt(b,a, channel) for channel in data]
+    return filtdata
+
+def notchfilter(data, framerate, quality, frequency):
+    """
+    Function to apply a notch filter to the given multichannel data.
+
+    Parameters
+    ----------
+    data : list
+        List containing the data per channel.
+    framerate : int
+        Framerate in frames per second.
+    quality : int
+        quality of the filter.
+    frequency : int
+        Frequency to be filtered out.
+
+    Returns
+    -------
+    filtdata : list
+        List containing the filtered data per channel.
+
+    """
+    #Calculate notch filter coefficients for a 2nd order matlab style iir filter.
+    b, a=iirnotch(frequency, quality, framerate)
+    #Apply filter
+    filtdata=[filtfilt(b,a, channel) for channel in data]
+    return filtdata
+
+def passfilter(data, framerate, order, frequency, highlow):
+    """
+    Function to apply a highpass or lowpass filter to the given multichannel data.
+
+    Parameters
+    ----------
+    data : list
+        List containing the data per channel.
+    framerate : int
+        Framerate in frames per second.
+    order : int
+        Order of the filter.
+    frequency : int
+        Frequency to be filtered out.
+    highlow : str
+        "high" for a highpass filter. "low" for a lowpass filter.
+
+    Returns
+    -------
+    filtdata : list
+        List containing the filtered data per channel.
+
+    """
+    #Nyquist frequency
+    nyq = framerate/2
+    #Calculate highpass filter coefficients for a matlabstyle iir filter
+    b, a = butter(order, frequency/nyq, btype=highlow)
+    #Apply filter
+    filtdata=[filtfilt(b,a, channel) for channel in data]
+    return filtdata
 
 def find_peaks(data, threshold, offset=0, subthresh=0.8):
     """
@@ -237,7 +328,6 @@ def SpikeSorting(DataSelection,thresholds,subthresh,framerate,time,cutoff_thresh
         maxval[ii]=cl2[ii]
         #Detect the other spikes per cluster
         for clusterN,th in enumerate(thresholds):
-            #clusters[ii][clusterN][0] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate)
             clusters[ii][clusterN][0],_ = find_peaks(DataSelection[ii], threshold=th, subthresh=subthresh)
             for peakN,x in enumerate(clusters[ii][clusterN][0][0]):
                 if x not in cutoff1[ii][0] and not any(x in clusters[ii][jj][0][0] for jj in range(clusterN)):

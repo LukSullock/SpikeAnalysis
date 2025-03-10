@@ -23,17 +23,15 @@ import itertools
 import math
 from copy import deepcopy
 from PyQt5.QtWidgets import QCheckBox
-from scipy.signal import butter, iirnotch, filtfilt
 from collections import defaultdict
 from matplotlib.colors import TABLEAU_COLORS
 from modules.GUI.QtMplCanvas import QtCanvas
-
-# import mne
-# from scipy.signal import convolve
+from modules.analysis.SpikeFunctions import bandpassfilter, notchfilter, passfilter
 
 def ViewRaw(self):
+    """Function to plot the raw data in the Import recording tab."""
     size=self.data.shape[0]
-    #Plot raw data in open recording tab
+    #Plot raw data in the Import recording tab
     [axis.remove() for axis in self.cnvs_rawrecording.axs]
     self.cnvs_rawrecording.axs=[]
     self.cnvs_rawrecording.axs=[self.cnvs_rawrecording.fig.add_subplot(size,1,1)]
@@ -44,6 +42,7 @@ def ViewRaw(self):
     self.cnvs_rawrecording.draw()
 
 def ViewUnfilter(self):
+    """Function to plot the unfiltered data and unfiltered FFT in the Filter data tab."""
     size=self.data.shape[0]
     #Plot unfiltered data in filters tab
     [axis.remove() for axis in self.cnvs_unfiltrecording.axs]
@@ -69,6 +68,25 @@ def ViewUnfilter(self):
     self.cnvs_unfiltfft.draw()
 
 def ViewFilter(self, quality=30, order=2):
+    """
+    Function to view the selected filters in the Filter data tab.
+
+    Parameters
+    ----------
+    quality : int, optional
+        Quality of the notch filter. Higher value has a narrower frequency filtering. The default is 30.
+    order : int, optional
+        Order of the high/low/band pass filters. Higher order results in a stronger filter. The default is 2.
+
+    Returns
+    -------
+    filtdata : list
+        List containing the filtered data.
+    filters : list
+        List containing the descriptions of the applied filters.
+
+    """
+    #Disable the button
     self.btn_setfilters.setEnabled(False)
     self.btn_setfilters.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_setfilters.repaint()
@@ -77,50 +95,20 @@ def ViewFilter(self, quality=30, order=2):
     filtdata=deepcopy(self.data)
     filters=[]
     if self.ch_notch.isChecked():
-        # filt=[mne.filter.notch_filter([float(point) for point in channel], self.framerate, self.sp_notch.value(), fir_design="firwin2", verbose=True) for channel in filtdata]
-        # filtdata=np.array([convolve(filt[ii], channel)[len(filt[ii])//2:] for ii,channel in enumerate(filtdata)])
-        # filters.append(f'Notch filter: {self.sp_notch.value()}')
-        #Calculate notch filter coefficients for a 2nd order matlab style iir filter.
-        b, a=iirnotch(self.sp_notch.value(), quality, self.framerate)
         #Apply filter
-        filtdata=[filtfilt(b,a, channel) for channel in filtdata]
+        filtdata=notchfilter(filtdata, self.framerate, quality, self.sp_notch.value())
         filters.append(f'Notch filter: {self.sp_notch.value()}; quality: {quality}; order: 2')
     if self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
-        # filt=[mne.filter.create_filter([float(point) for point in channel], self.framerate, l_freq=self.sp_bandpasslow.value(), h_freq=self.sp_bandpasshigh.value(), fir_design="firwin2", verbose=True) for channel in filtdata]
-        # filtdata=np.array([convolve(filt[ii], channel) for ii,channel in enumerate(filtdata)])
-        # filters.append(f'Bandpass filter: {self.sp_bandpasshigh.value()}, {self.sp_bandpasslow.value()}')
-        nyq = self.framerate/2
-        #set band filter range
-        self.filt_highpass = self.sp_bandpasshigh.value()/nyq
-        self.filt_lowpass = self.sp_bandpasslow.value()/nyq
-        #Calculate bandpass filter coefficients for a matlabstyle iir filter
-        b, a = butter(order, [self.filt_highpass, self.filt_lowpass], btype='band')
         #Apply filter
-        filtdata=[filtfilt(b,a, channel) for channel in filtdata]
+        filtdata=bandpassfilter(filtdata, self.framerate, order, [self.filt_highpass, self.filt_lowpass])
         filters.append(f'Bandpass filter: {self.sp_bandpasshigh.value()}, {self.sp_bandpasslow.value()}; order: {order}')
     elif self.ch_highpass.isChecked() and not self.ch_lowpass.isChecked():
-        # filt=[mne.filter.create_filter([float(point) for point in channel], self.framerate, l_freq=self.sp_bandpasslow.value(), h_freq=None, fir_design="firwin2", verbose=True) for channel in filtdata]
-        # filtdata=np.array([convolve(filt[ii], channel) for ii,channel in enumerate(filtdata)])
-        # filters.append(f'Highpass filter: {self.sp_bandpasshigh.value()}')
-        nyq = self.framerate/2
-        #Get high pass filter
-        self.filt_highpass = self.sp_bandpasshigh.value()/nyq
-        #Calculate highpass filter coefficients for a matlabstyle iir filter
-        b, a = butter(order, self.filt_highpass, btype='high')
         #Apply filter
-        filtdata=[filtfilt(b,a, channel) for channel in filtdata]
+        filtdata=passfilter(filtdata, self.framerate, order, self.filt_highpass, "high")
         filters.append(f'Highpass filter: {self.sp_bandpasshigh.value()}; order: {order}')
     elif not self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
-        # filt=[mne.filter.create_filter([float(point) for point in channel], self.framerate, l_freq=None, h_freq=self.sp_bandpasshigh.value(), fir_design="firwin2", verbose=True) for channel in filtdata]
-        # filtdata=np.array([convolve(filt[ii], channel) for ii,channel in enumerate(filtdata)])
-        # filters.append(f'Lowpass filter: {self.sp_bandpasslow.value()}')
-        nyq = self.framerate/2
-        #Get low pass filter
-        self.filt_lowpass = self.sp_bandpasslow.value()/nyq
-        #Calculate low filter coefficients for a matlabstyle iir filter
-        b, a = butter(order, self.filt_lowpass, btype='low')
-        #Apply filter to the signal
-        filtdata=[filtfilt(b,a, channel) for channel in filtdata]
+        #Apply filter
+        filtdata=passfilter(filtdata, self.framerate, order, self.filt_lowpass, "low")
         filters.append(f'Lowpass filter: {self.sp_bandpasslow.value()}; order: {order}')
     #Plot filtered data
     [axis.remove() for axis in self.cnvs_filtrecording.axs]
@@ -144,11 +132,13 @@ def ViewFilter(self, quality=30, order=2):
     self.cnvs_filtfft.fig.text(0.5, 0.02, "Frequency (Hz)", ha="center")
     self.cnvs_filtrecording.draw()
     self.cnvs_filtfft.draw()
+    #Reenable the button
     self.btn_setfilters.setStyleSheet(u"background-color: rgb(0, 255, 0);")
     self.btn_setfilters.setEnabled(True)
     return filtdata, filters
 
 def ApplyFilter(self):
+    """Function to apply the filters to the stored data."""
     #Update non-filtered plot
     ViewUnfilter(self)
     #Get filtered data
@@ -163,6 +153,26 @@ def ApplyFilter(self):
     [self.history.append(np.array(filt)) for filt in filters]
 
 def UpdateMarkers(self, starttimes, stoptimes, fdata):
+    """
+    Function to update the markers for the selected time frames and plot them in the Data selection tab.
+
+    Parameters
+    ----------
+    starttimes : list
+        List containing the start times of each time frame.
+    stoptimes : list
+        List containing the stop times of each time frame.
+    fdata : list
+        List containing the data.
+
+    Returns
+    -------
+    vlines : list
+        A list containing the values the time stamps and colour of the markers.
+    markers : defaultdict
+        Default dictionary containing the markers.
+
+    """
     vlines=[]
     colours=itertools.cycle(TABLEAU_COLORS)
     markers=deepcopy(self.markers)
@@ -197,6 +207,17 @@ def UpdateMarkers(self, starttimes, stoptimes, fdata):
     return vlines, markers
 
 def ViewDataSel(self):
+    """
+    Function to show the selected channels and time frames in the Data selection tab.
+
+    Returns
+    -------
+    fdata : list
+        List containing the data.
+    markers : defaultdict
+        Default dictionary containing the markers.
+
+    """
     self.btn_viewdatasel.setEnabled(False)
     self.btn_viewdatasel.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_viewdatasel.repaint()
@@ -231,6 +252,7 @@ def ViewDataSel(self):
     return fdata, markers
 
 def ApplyDataSel(self):
+    """Function to apply the selected channels and time frames to the data."""
     #Get data selection
     data, markers=ViewDataSel(self)
     if type(data)==bool:
@@ -260,6 +282,18 @@ def ApplyDataSel(self):
     self.history.append(np.array(f'Data selection: {", ".join([str(ch) for ch in channelsel])}; {", ".join(starttimes)}; {", ".join(stoptimes)}'))
 
 def SpikeSort(self, cutoff, recurrence=0.80):
+    """
+    Function to find and sort spikes into clusters based on the selected thresholds.
+    Plots the cluster data in the Spike sorting tab.
+
+    Parameters
+    ----------
+    cutoff : int
+        The cut-off threshold. Can be negative or positive. Can be set to 0 or False if no cut-off threshold is desired.
+    recurrence : float, optional
+        The proportion of the threshold the signal needs to go below, before looking for the next spike. The default is 0.80.
+
+    """
     thresholds=[]
     #If there is a cutoff threshold, make it an array, containing the value and the colour red
     if cutoff:
@@ -319,12 +353,24 @@ def SpikeSort(self, cutoff, recurrence=0.80):
             self.cnvs_spikesortpre.axs[ii].axhline(line[0], color=line[1])
     self.cnvs_spikesortpre.fig.text(0.01, 0.5, "Amplitude (A.U.)", va="center", rotation="vertical")
     self.cnvs_spikesortpre.fig.text(0.5, 0.02, "Time (s)", ha="center")
-    
     #Update plots
     self.cnvs_spikesort.draw()
     self.cnvs_spikesortpre.draw()
 
 def AverageWaveform(self, min_val=5, max_val=10):
+    """
+    Function to plot the average waveforms in the Average waveforms tab.
+    Each cluster gets its own tab with a plot within the Average waveforms tab.
+    Every plot contains all the applicable waveforms, their average, and the standard deviation.
+
+    Parameters
+    ----------
+    min_val : int, optional
+        Integer denoting the miliseconds before the spike that are plotted. The default is 5.
+    max_val : int, optional
+        Integer denoting the miliseconds after the spike that are plotted. The default is 10.
+
+    """
     self.btn_getwaveforms.setEnabled(False)
     self.btn_getwaveforms.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_getwaveforms.repaint()
@@ -375,6 +421,7 @@ def AverageWaveform(self, min_val=5, max_val=10):
     self.btn_getwaveforms.setStyleSheet(u"background-color: rgb(0, 255, 0);")
 
 def InterSpikeInterval(self):
+    """Function to plot the interspike interval in the Interspike interval tab."""
     self.btn_getisi.setEnabled(False)
     self.btn_getisi.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_getisi.repaint()
@@ -409,6 +456,7 @@ def InterSpikeInterval(self):
     self.btn_getisi.setStyleSheet(u"background-color: rgb(0, 255, 0);")
 
 def AmplitudeDistribution(self):
+    """Function to plot the amplitude distribution in the Amplitude distribution tab."""
     self.btn_getamplitude.setEnabled(False)
     self.btn_getamplitude.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_getamplitude.repaint()
@@ -476,6 +524,12 @@ def cross_correlate(spikeset1, spikeset2, interval):
     return cross
 
 def AutoCorrelation(self):
+    """
+    Function to plot the auto-correlation for every cluster in the Auto-correlation tab.
+    Every plot has their own tab within the Auto-correlation tab
+    The time interval is directly taken from the GUI.
+
+    """
     self.btn_getautocorr.setEnabled(False)
     self.btn_getautocorr.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_getautocorr.repaint()
@@ -504,7 +558,7 @@ def AutoCorrelation(self):
                 self.cnvss_autocorr.append(self.plt_container_autocorrs[-1].canvas)
                 self.cnvss_autocorr[-1].axs=[self.cnvss_autocorr[-1].fig.add_subplot(1,1,1)]
                 self.plt_container_autocorr.addTab(self.plt_container_autocorrs[-1], f'{self.fulldata["Channels"][ii]} Cluster {self.clusters[ii][jj][4][0]}')
-                self.cnvss_autocorr[-1].axs[ii].plot(np.arange(-spikeset.size/2, spikeset.size/2)+0.5, spikeset)
+                self.cnvss_autocorr[-1].axs[ii].plot(np.arange(-spikeset.size/2, spikeset.size/2)+0.5, spikeset, color="k")
                 self.cnvss_autocorr[-1].fig.text(0.01, 0.5, "# of spikes", va="center", rotation="vertical")
                 self.cnvss_autocorr[-1].fig.text(0.5, 0.02, "Time (ms)", ha="center")
                 self.cnvss_autocorr[-1].axs[ii].text(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=self.cnvss_autocorr[-1].axs[0].transAxes)
@@ -513,6 +567,11 @@ def AutoCorrelation(self):
     self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
 
 def CrossCorrelation(self):
+    """
+    Function to plot the cross-correlation in the Cross-correlation tab.
+    Chosen clusters and time interval to plot are taken directly from the GUI.
+
+    """
     self.btn_getcrosscorr.setEnabled(False)
     self.btn_getcrosscorr.setStyleSheet(u"background-color: rgb(93, 93, 93);")
     self.btn_getcrosscorr.repaint()
@@ -531,6 +590,7 @@ def CrossCorrelation(self):
         channelindx=np.where(self.channels==self.cb_crossch1.currentText())[0][0]
         clusterindx=np.where(clusterlist==self.cb_crosscl1.currentText())[0][0]
         spikeset1=np.array([x*1000 for x in self.clusters[channelindx][clusterindx][1] if ~np.isnan(x)])
+    #Get cluster indices
     clusterlist=np.array([f'Cluster {clus[4][0]}' for clus in self.clusters[0]])
     channelindx=np.where(self.channels==self.cb_crossch2.currentText())[0][0]
     clusterindx=np.where(clusterlist==self.cb_crosscl2.currentText())[0][0]
@@ -538,7 +598,7 @@ def CrossCorrelation(self):
     #Calculate cross-correlation
     cross_corr=cross_correlate(spikeset1, spikeset2, intervalsize*1000)
     #Plot cross-correlation
-    self.cnvs_crosscorr.axs[0].plot(np.arange(-cross_corr.size/2, cross_corr.size/2)+0.5, cross_corr)
+    self.cnvs_crosscorr.axs[0].plot(np.arange(-cross_corr.size/2, cross_corr.size/2)+0.5, cross_corr, color="k")
     self.cnvs_crosscorr.fig.text(0.01, 0.5, "# of spikes", va="center", rotation="vertical")
     self.cnvs_crosscorr.fig.text(0.5, 0.02, "Time (ms)", ha="center")
     self.cnvs_crosscorr.draw()

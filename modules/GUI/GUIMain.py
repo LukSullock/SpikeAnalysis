@@ -65,13 +65,14 @@ class Main(QMainWindow, Ui_MainWindow):
         self.crosscorr_clus2=[]
         #Data
         self.datatype=""
-        self.data=[] #signal data
+        self.data=[]
         self.time=[]
-        self.clusters=[] #spike times data
+        self.clusters=[]
         self.markers=defaultdict(list)
         self.framerate=0
         self.history=[]
         self.identifier="001"
+        #All data
         self.fulldata={"Datatype": self.datatype,
                        "Data": self.data,
                        "Framerate": self.framerate,
@@ -79,7 +80,7 @@ class Main(QMainWindow, Ui_MainWindow):
                        "Markers": self.markers,
                        "Clusters": self.clusters,
                        "History": self.history,
-                       "Identifier": self.identifier} #All data
+                       "Identifier": self.identifier}
         #Plot canvasses
         self.cnvs_rawrecording=self.plt_container_raw.canvas
         self.cnvs_unfiltrecording=self.plt_container_unfilt.canvas
@@ -132,22 +133,27 @@ class Main(QMainWindow, Ui_MainWindow):
         self.lbl_order.setText(str(self.order))
         self.lbl_quality.setText(str(self.quality))
         
+        #Disable buttons that require data to be ran
         self.btn_loadmarkers.setEnabled(False)
         self.btn_loadmarkers_2.setEnabled(False)
         self.btn_savefilt.setEnabled(False)
         self.btn_savedatasel.setEnabled(False)
         self.btn_savespikes.setEnabled(False)
         self.btn_exportcsv.setEnabled(False)
+        #Disable batch action, since that is not implemented
         self.actionBatch_analysis.setEnabled(False)
         
     def NextTab(self):
+        """Method to advance the displayed tab to the next one."""
         indx=self.tabWidget.currentIndex()
         self.tabWidget.setCurrentIndex(indx+1)
     def PreviousTab(self):
+        """Method to advance the displayed tab to the previous one."""
         indx=self.tabWidget.currentIndex()
         self.tabWidget.setCurrentIndex(indx-1)
         
     def AddTimeFrame(self):
+        """Method to add a timeframe to the Data selection tab."""
         self.gridLayout_4.removeItem(self.verticalSpacer_9)
         self.dsps_starttimes.append(QDoubleSpinBox(self.scrollAreaWidgetContents))
         self.dsps_stoptimes.append(QDoubleSpinBox(self.scrollAreaWidgetContents))
@@ -165,6 +171,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.lbls_timeto[-1].setText("to")
         self.lbls_timesec[-1].setText("seconds")
     def RemoveTimeFrame(self):
+        """Method to remove the last timeframe from the Data selection tab."""
         if len(self.dsps_starttimes):
             self.gridLayout_4.removeItem(self.verticalSpacer_9)
             self.gridLayout_4.removeWidget(self.dsps_starttimes[-1])
@@ -178,6 +185,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.gridLayout_4.addItem(self.verticalSpacer_9, len(self.dsps_starttimes)+2, 2, 1, 1)
         
     def AddThreshold(self):
+        """Method to add a threshold to the Spike sorting tab."""
         self.gridLayout_6.removeItem(self.verticalSpacer_3)
         self.sps_thresholds.append(QSpinBox(self.scrollAreaWidgetContents_2))
         self.gridLayout_6.addWidget(self.sps_thresholds[-1], len(self.sps_thresholds)+2, 0, 1, 1)
@@ -186,6 +194,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.sps_thresholds[-1].setMinimum(-999999999)
         self.gridLayout_6.addItem(self.verticalSpacer_3, len(self.sps_thresholds)+3, 1, 1, 1)
     def RemoveThreshold(self):
+        """Method to remove the last threshold from the Spike sorting tab."""
         if len(self.sps_thresholds):
             self.gridLayout_6.removeItem(self.verticalSpacer_3)
             self.gridLayout_6.removeWidget(self.sps_thresholds[-1])
@@ -193,9 +202,11 @@ class Main(QMainWindow, Ui_MainWindow):
             self.gridLayout_6.addItem(self.verticalSpacer_3, len(self.sps_thresholds)+3, 1, 1, 1)
         
     def BatchWindow(self):
+        """Method for batch analysis, not implemented yet."""
         pass
     
     def LoadMarkers(self):
+        """Method to load a marker file. Marker file to be imported is chosen within the method."""
         filedialog=QFileDialog(self)
         filedialog.setWindowTitle("Open file...")
         filedialog.setNameFilters(["Text file (*.txt)"])
@@ -225,6 +236,16 @@ class Main(QMainWindow, Ui_MainWindow):
             self.cb_crossch2.clear()
             self.cb_crossch2.addItems(self.channels)
     def LoadData(self, plotloadeddata=True):
+        """
+        Method to load in data. Imported file is chosen within the method.
+        Prints the history to the console of the loaded data.
+
+        Parameters
+        ----------
+        plotloadeddata : bool, optional
+            Boolean to denote if the data should be immediately plotted, or only imported. The default is True.
+
+        """
         self.btn_import.setEnabled(False)
         self.btn_import.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_import.repaint()
@@ -352,6 +373,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_import.setEnabled(True)
             
     def ApplyFilters(self):
+        """Method to call the function required to apply filters to the stored data."""
         self.btn_applyfilt.setEnabled(False)
         self.btn_applyfilt.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_applyfilt.repaint()
@@ -360,6 +382,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_applyfilt.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_applyfilt.setEnabled(True)
     def ApplyDataSel(self):
+        """Method to call the functions required to apply data selection to the stored data."""
         self.btn_applydatasel.setEnabled(False)
         self.btn_applydatasel.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_applydatasel.repaint()
@@ -373,6 +396,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_applydatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_applydatasel.setEnabled(True)
     def SortSpikes(self):
+        """Method to sort the spikes into clusters."""
         self.btn_spikesort.setEnabled(False)
         self.btn_spikesort.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_spikesort.repaint()
@@ -411,6 +435,15 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_spikesort.setEnabled(True)
         
     def SaveData(self, extension):
+        """
+        Method to save the stored data.
+
+        Parameters
+        ----------
+        extension : str
+            String that will be appended to the output file by default as an identifier.
+
+        """
         self.btn_savefilt.setEnabled(False)
         self.btn_savefilt.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_savefilt.repaint()
@@ -451,6 +484,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_savespikes.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_savespikes.setEnabled(True)
     def ExportAsCSV(self):
+        """Method to export cluster data to a .csv file."""
         self.btn_exportcsv.setEnabled(False)
         self.btn_exportcsv.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_exportcsv.repaint()
@@ -482,9 +516,11 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_exportcsv.setEnabled(True)
     
     def FramerateChange(self):
+        """Method to update the framerate."""
         self.framerate=self.sp_framerate.value()
         
     def CrosscorrSelectChange1(self):
+        """Method to update the selectable clusters based on the selected channel of the first cluster."""
         if len(self.clusters)==0:
             return
         self.cb_crossch1.currentTextChanged.disconnect()
@@ -493,6 +529,7 @@ class Main(QMainWindow, Ui_MainWindow):
             self.cb_crosscl1.addItems([f'Cluster {clus[4][0]}' for clus in self.clusters[0]])
         self.cb_crossch1.currentTextChanged.connect(self.CrosscorrSelectChange1)
     def CrosscorrSelectChange2(self):
+        """Method to update the selectable clusters based on the selected channel of the second cluster."""
         if len(self.clusters)==0:
             return
         self.cb_crossch2.currentTextChanged.disconnect()
@@ -537,7 +574,6 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.setWindowTitle("Information")
         msg.exec_()
     
-
 def start():
     """Function to start the GUI"""
     app = QApplication(sys.argv)

@@ -806,7 +806,7 @@ class Ui_MainWindow(object):
         self.label_17.setToolTip(QCoreApplication.translate("MainWindow", u"Determines steepness of the filter. Higher value can filter unwanted signals better, but requires more computation and can cause phase shifts.\n"
 "Default is 2.", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order (high/low/band)", None))
+        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order", None))
         self.lbl_order.setText("")
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"Quality (notch)", None))
         self.lbl_quality.setText("")
