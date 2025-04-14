@@ -19,13 +19,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import numpy as np
 import scipy as sp
-import pandas as pd
 import os
 import traceback
 from collections import defaultdict
 from scipy.signal import butter, iirnotch, filtfilt
 
-    
+
 def OpenRecording(folder, filename):
     """
     Function to load in data and markers.
@@ -345,120 +344,3 @@ def SpikeSorting(DataSelection,thresholds,subthresh,framerate,time,cutoff_thresh
             for kk in range(len(clusters[ii][jj])):
                 clusters[ii][jj][kk]=np.append(clusters[ii][jj][kk], np.zeros(maxsize-len(clusters[ii][jj][kk]))+np.nan)
     return clusters
-
-def DataSelect(data,markers,framerate,times):
-    """
-    Depricated.
-    
-    Function to create a selection of the data.
-    If no input was given, default to whole recording.
-
-    Parameters
-    ----------
-    data : Array of int64
-        Array containing y-values per channel.
-    markers : defaultdict
-        Dictionary with marker numbers as keys, and marker time stamps as values.
-    framerate : int
-        Sampling rate of the data.
-    times : String
-        String containing time frames. Different time frames should be seperated by 'and'.
-
-    Returns
-    -------
-    [start_time,stop_time] : list
-        A list containing all the start times and stop times of the individual time frames.
-    DataSelection : list
-        A list containing the signal data in the selected time frames per channel.
-    markers : defaultdict
-        Dictionary with marker numbers as keys, and marker time stamps as values.
-
-    """
-    #Get time frames
-    times=times.split(" and ")
-    for ii,art in enumerate(times):
-        times[ii]=art.split(" to ")
-    #If there is no given range, default to whole recording
-    if not len(times[0][0]):
-        times=[["0", f"{len(data[0])}"]]
-    #Get the time stamps of markers when they are used
-    for ii,th in enumerate(times):
-        for jj,art in enumerate(th):
-            #If a marker was given then use maker time, otherwise convert string to float.
-            if "m" in art or "M" in art:
-                try:
-                    times[ii][jj]=markers[int(times[ii][jj][-1])][0]
-                except IndexError as err:
-                    return False, [f"Marker {str(err)}", traceback.format_exc()]
-                except ValueError as err:
-                    return False, [f"Marker {str(err)}", traceback.format_exc()]
-            else:
-                try:
-                    times[ii][jj]=float(times[ii][jj])
-                except ValueError as err:
-                    return False, [f"Marker {str(err)}", traceback.format_exc()]
-    #Create lists for start and stop times
-    start_time=[art[0] for art in times]
-    stop_time=[art[1] for art in times]
-    #Create selection of data
-    DataSelection = np.empty((len(data),len(data[0])))
-    DataSelection[:]=np.nan
-    for ii in range(len(start_time)):
-        for chan in range(len(DataSelection)):
-            #Copy the data of the selected time windows from whole data variable to the dataselection variable
-            DataSelection[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]=data[chan][int(start_time[ii]*framerate):int(stop_time[ii]*framerate)]
-    for marker in markers.keys():
-        for ii in reversed(range(len(markers[marker]))):
-            pop=True
-            for jj, start in enumerate(start_time):
-                if markers[marker][ii]>=start and markers[marker][ii]<=stop_time[jj]:
-                    pop=False
-            if pop: markers[marker].pop(ii)
-    markers=defaultdict(None, {key: item for key, item in markers.items() if item})
-    return [start_time,stop_time],DataSelection,markers
-
-def SaveAll(data, folder, output):
-    """
-    For every cluster creates dataframes for the time in seconds where a spike occurred, start and stop times of data selection in seconds, hertz in /s and cut off threshold in a.u.
-    Files are saved in the /saved directory in the path where main file is located
-    1 csv file per cluster and 1 pdf file with all plots
-    
-    NOTE: Check for overwriting files does not happen in this function, but in the SavePlots function, see modules/GUI/GUIFunctions.
-
-    Parameters
-    ----------
-    clusters : list
-        A list containing all peaks above threshold height, timestamps of peaks, heights of peaks, height of spike marker per peak, and the threshold height per threshold per channel.
-    erpsignals : list
-        List containing a dict with the average ERP signal for every marker per channel.
-    start_time : list
-        List containing the start times of every time frame.
-    stop_time : list
-        List containing the stop times of every time frame.
-    folder : String
-        String of the folder path from where to save the file.
-    output : string
-        String containing the file identifier, which is included in every filename.
-    cutoff_thresh : list
-        List with the cutoff value. The default is [].
-    channels : list
-        List of channel numbers.
-
-    """
-    #Get cluster data
-    clusters=data["Clusters"]
-    start_time=0
-    stop_time=0
-    cutoff_thresh=0
-    channels=[1,2]
-    for jj,chan in enumerate(clusters):
-        for ii,cl in enumerate(chan):
-            oridf=pd.DataFrame({cl[4]: cl[1]})
-            adddf=pd.DataFrame({"Start time": start_time,"Stop time":stop_time})
-            meanhertz=len(cl[1])/(sum([stop_time[tt]-start_time[tt] for tt in range(len(start_time))]))
-            meanhzdf=pd.DataFrame({"Frequency": [meanhertz]})
-            # if cutoff_thresh:
-            #     cutoff_thresh=cutoff_thresh[0]
-            cutoffdf=pd.DataFrame({"Cut off threshold": cutoff_thresh})
-            df1=pd.concat([oridf,adddf,meanhzdf,cutoffdf],axis=1)
-            df1.to_csv(os.path.join(folder,f'spiketimes_{output}_channel{channels[jj]}_cluster{ii+1}.csv'),index=False)

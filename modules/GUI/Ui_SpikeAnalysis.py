@@ -8,8 +8,8 @@
 ## WARNING! All changes made in this file will be lost when recompiling UI file!
 ################################################################################
 
-#Imports have been edited. UI now uses Qt5 instead of 6, path to QtMplCanvas has been updated to import from main directory with a reletive path.
-#At the end and in between imports, a bit of code has been included to let this file being able to run standalone for testing purposes.
+#Imports have been edited. UI now uses Qt5 instead of Qt6, path to QtMplCanvas has been updated to import from main directory with a reletive path.
+#At the end and in between imports, a bit of code has been included to let this file run standalone for testing purposes.
 
 from PyQt5.QtCore import (QCoreApplication, QMetaObject, QRect)
 from PyQt5.QtWidgets import (QApplication, QCheckBox, QComboBox, QDoubleSpinBox,
@@ -29,34 +29,18 @@ class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
             MainWindow.setObjectName(u"MainWindow")
-        MainWindow.resize(796, 586)
-        self.actionOpen_recording = QAction(MainWindow)
-        self.actionOpen_recording.setObjectName(u"actionOpen_recording")
-        self.actionFilter_data = QAction(MainWindow)
-        self.actionFilter_data.setObjectName(u"actionFilter_data")
-        self.actionData_selection = QAction(MainWindow)
-        self.actionData_selection.setObjectName(u"actionData_selection")
-        self.actionSpike_sorting = QAction(MainWindow)
-        self.actionSpike_sorting.setObjectName(u"actionSpike_sorting")
-        self.actionAverage_Waveform = QAction(MainWindow)
-        self.actionAverage_Waveform.setObjectName(u"actionAverage_Waveform")
-        self.actionInterspike_interval = QAction(MainWindow)
-        self.actionInterspike_interval.setObjectName(u"actionInterspike_interval")
-        self.actionAmplitude_distribution = QAction(MainWindow)
-        self.actionAmplitude_distribution.setObjectName(u"actionAmplitude_distribution")
-        self.actionAuto_correlation = QAction(MainWindow)
-        self.actionAuto_correlation.setObjectName(u"actionAuto_correlation")
-        self.actionCross_correlation = QAction(MainWindow)
-        self.actionCross_correlation.setObjectName(u"actionCross_correlation")
+        MainWindow.resize(800, 600)
         self.actionImport_file = QAction(MainWindow)
         self.actionImport_file.setObjectName(u"actionImport_file")
         self.actionBatch_analysis = QAction(MainWindow)
         self.actionBatch_analysis.setObjectName(u"actionBatch_analysis")
-        self.actionFile_History = QAction(MainWindow)
-        self.actionFile_History.setObjectName(u"actionFile_History")
+        self.actionFile_history = QAction(MainWindow)
+        self.actionFile_history.setObjectName(u"actionFile_history")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
-        self.gridLayout = QGridLayout(self.centralwidget)
+        self.gridLayout_13 = QGridLayout(self.centralwidget)
+        self.gridLayout_13.setObjectName(u"gridLayout_13")
+        self.gridLayout = QGridLayout()
         self.gridLayout.setObjectName(u"gridLayout")
         self.tabWidget = QTabWidget(self.centralwidget)
         self.tabWidget.setObjectName(u"tabWidget")
@@ -327,7 +311,7 @@ class Ui_MainWindow(object):
         self.sa_timeframes.setWidgetResizable(True)
         self.scrollAreaWidgetContents = QWidget()
         self.scrollAreaWidgetContents.setObjectName(u"scrollAreaWidgetContents")
-        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 251, 212))
+        self.scrollAreaWidgetContents.setGeometry(QRect(0, 0, 251, 218))
         self.gridLayout_4 = QGridLayout(self.scrollAreaWidgetContents)
         self.gridLayout_4.setObjectName(u"gridLayout_4")
         self.btn_removetime = QPushButton(self.scrollAreaWidgetContents)
@@ -368,7 +352,7 @@ class Ui_MainWindow(object):
         self.sa_channels.setWidgetResizable(True)
         self.scrollAreaWidgetContents_3 = QWidget()
         self.scrollAreaWidgetContents_3.setObjectName(u"scrollAreaWidgetContents_3")
-        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 69, 229))
+        self.scrollAreaWidgetContents_3.setGeometry(QRect(0, 0, 69, 235))
         self.verticalLayout = QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout.setObjectName(u"verticalLayout")
         self.label_5 = QLabel(self.scrollAreaWidgetContents_3)
@@ -434,7 +418,7 @@ class Ui_MainWindow(object):
         self.sa_thresholds.setWidgetResizable(True)
         self.scrollAreaWidgetContents_2 = QWidget()
         self.scrollAreaWidgetContents_2.setObjectName(u"scrollAreaWidgetContents_2")
-        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 369, 199))
+        self.scrollAreaWidgetContents_2.setGeometry(QRect(0, 0, 369, 205))
         self.gridLayout_6 = QGridLayout(self.scrollAreaWidgetContents_2)
         self.gridLayout_6.setObjectName(u"gridLayout_6")
         self.btn_removethreshold = QPushButton(self.scrollAreaWidgetContents_2)
@@ -680,29 +664,32 @@ class Ui_MainWindow(object):
 
         self.gridLayout.addWidget(self.tabWidget, 0, 0, 1, 3)
 
-        self.Btn_Exit = QPushButton(self.centralwidget)
-        self.Btn_Exit.setObjectName(u"Btn_Exit")
+        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
 
-        self.gridLayout.addWidget(self.Btn_Exit, 2, 2, 1, 1)
-
-        self.Btn_Next = QPushButton(self.centralwidget)
-        self.Btn_Next.setObjectName(u"Btn_Next")
-
-        self.gridLayout.addWidget(self.Btn_Next, 1, 2, 1, 1)
+        self.gridLayout.addItem(self.horizontalSpacer, 1, 0, 1, 1)
 
         self.Btn_Previous = QPushButton(self.centralwidget)
         self.Btn_Previous.setObjectName(u"Btn_Previous")
 
         self.gridLayout.addWidget(self.Btn_Previous, 1, 1, 1, 1)
 
-        self.horizontalSpacer = QSpacerItem(40, 20, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self.Btn_Next = QPushButton(self.centralwidget)
+        self.Btn_Next.setObjectName(u"Btn_Next")
 
-        self.gridLayout.addItem(self.horizontalSpacer, 1, 0, 1, 1)
+        self.gridLayout.addWidget(self.Btn_Next, 1, 2, 1, 1)
+
+        self.Btn_Exit = QPushButton(self.centralwidget)
+        self.Btn_Exit.setObjectName(u"Btn_Exit")
+
+        self.gridLayout.addWidget(self.Btn_Exit, 2, 2, 1, 1)
+
+
+        self.gridLayout_13.addLayout(self.gridLayout, 0, 0, 1, 1)
 
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QMenuBar(MainWindow)
         self.menubar.setObjectName(u"menubar")
-        self.menubar.setGeometry(QRect(0, 0, 796, 22))
+        self.menubar.setGeometry(QRect(0, 0, 800, 22))
         self.menuMenu = QMenu(self.menubar)
         self.menuMenu.setObjectName(u"menuMenu")
         MainWindow.setMenuBar(self.menubar)
@@ -711,10 +698,9 @@ class Ui_MainWindow(object):
         self.menuMenu.addAction(self.actionImport_file)
         self.menuMenu.addAction(self.actionBatch_analysis)
         self.menuMenu.addSeparator()
-        self.menuMenu.addAction(self.actionFile_History)
+        self.menuMenu.addAction(self.actionFile_history)
 
         self.retranslateUi(MainWindow)
-        self.Btn_Exit.clicked.connect(MainWindow.close)
 
         self.tabWidget.setCurrentIndex(0)
         self.plt_container_waveforms.setCurrentIndex(-1)
@@ -726,22 +712,9 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"MainWindow", None))
-        self.actionOpen_recording.setText(QCoreApplication.translate("MainWindow", u"Import data", None))
-        self.actionFilter_data.setText(QCoreApplication.translate("MainWindow", u"Filter data", None))
-        self.actionData_selection.setText(QCoreApplication.translate("MainWindow", u"Data selection", None))
-        self.actionSpike_sorting.setText(QCoreApplication.translate("MainWindow", u"Spike sorting", None))
-        self.actionAverage_Waveform.setText(QCoreApplication.translate("MainWindow", u"Average Waveform", None))
-        self.actionInterspike_interval.setText(QCoreApplication.translate("MainWindow", u"Interspike interval", None))
-        self.actionAmplitude_distribution.setText(QCoreApplication.translate("MainWindow", u"Amplitude distribution", None))
-        self.actionAuto_correlation.setText(QCoreApplication.translate("MainWindow", u"Auto-correlation", None))
-        self.actionCross_correlation.setText(QCoreApplication.translate("MainWindow", u"Cross-correlation", None))
         self.actionImport_file.setText(QCoreApplication.translate("MainWindow", u"Import file...", None))
-#if QT_CONFIG(tooltip)
-        self.actionImport_file.setToolTip(QCoreApplication.translate("MainWindow", u"Import file\n"
-"Can be a signal file or sorted spike data.", None))
-#endif // QT_CONFIG(tooltip)
         self.actionBatch_analysis.setText(QCoreApplication.translate("MainWindow", u"Batch analysis", None))
-        self.actionFile_History.setText(QCoreApplication.translate("MainWindow", u"File History", None))
+        self.actionFile_history.setText(QCoreApplication.translate("MainWindow", u"File history", None))
 #if QT_CONFIG(tooltip)
         self.tabWidget.setToolTip("")
 #endif // QT_CONFIG(tooltip)
@@ -769,9 +742,9 @@ class Ui_MainWindow(object):
 "The rows should be the amount of channels and the columns the amount of datapoints per channel.", None))
 #endif // QT_CONFIG(tooltip)
         self.lbl_fileshape.setText("")
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Import data", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open recording", None))
 #if QT_CONFIG(tooltip)
-        self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open a recording.\n"
+        self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Recording), QCoreApplication.translate("MainWindow", u"Open recording.\n"
 "Used to import and view the raw signal data.", None))
 #endif // QT_CONFIG(tooltip)
 #if QT_CONFIG(tooltip)
@@ -806,7 +779,7 @@ class Ui_MainWindow(object):
         self.label_17.setToolTip(QCoreApplication.translate("MainWindow", u"Determines steepness of the filter. Higher value can filter unwanted signals better, but requires more computation and can cause phase shifts.\n"
 "Default is 2.", None))
 #endif // QT_CONFIG(tooltip)
-        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order", None))
+        self.label_17.setText(QCoreApplication.translate("MainWindow", u"Order (bandpass)", None))
         self.lbl_order.setText("")
         self.label_19.setText(QCoreApplication.translate("MainWindow", u"Quality (notch)", None))
         self.lbl_quality.setText("")
@@ -815,7 +788,7 @@ class Ui_MainWindow(object):
 "Note that after time frames have been applied in data selection, filters are no longer applicable.", None))
 #endif // QT_CONFIG(tooltip)
         self.btn_applyfilt.setText(QCoreApplication.translate("MainWindow", u"Apply filters", None))
-        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filter data", None))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filters", None))
 #if QT_CONFIG(tooltip)
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Raw), QCoreApplication.translate("MainWindow", u"Filters.\n"
 "Used for filtering your signal.\n"
@@ -954,12 +927,11 @@ class Ui_MainWindow(object):
         self.tabWidget.setTabToolTip(self.tabWidget.indexOf(self.Tab_Crosscorr), QCoreApplication.translate("MainWindow", u"Cross-correlation.\n"
 "Used for spiketrain detection between clusters.", None))
 #endif // QT_CONFIG(tooltip)
-        self.Btn_Exit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
-        self.Btn_Next.setText(QCoreApplication.translate("MainWindow", u"Next", None))
         self.Btn_Previous.setText(QCoreApplication.translate("MainWindow", u"Previous", None))
+        self.Btn_Next.setText(QCoreApplication.translate("MainWindow", u"Next", None))
+        self.Btn_Exit.setText(QCoreApplication.translate("MainWindow", u"Quit", None))
         self.menuMenu.setTitle(QCoreApplication.translate("MainWindow", u"Menu", None))
     # retranslateUi
-
 
 
 if __name__=="__main__":

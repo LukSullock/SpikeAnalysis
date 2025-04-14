@@ -126,7 +126,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_getcrosscorr.clicked.connect(lambda: GUIFunctions.CrossCorrelation(self))
         self.cb_crossch1.currentTextChanged.connect(self.CrosscorrSelectChange1)
         self.cb_crossch2.currentTextChanged.connect(self.CrosscorrSelectChange2)
-        self.actionFile_History.triggered.connect(lambda: self.InfoMsg("History", "\n".join(self.history)))
+        self.actionFile_history.triggered.connect(lambda: self.InfoMsg("History", "\n".join(self.history)))
         self.actionBatch_analysis.triggered.connect(self.BatchWindow)
         
         #Set labels
