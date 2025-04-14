@@ -101,15 +101,15 @@ def ViewFilter(self, quality=30, order=2):
     if self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
         #Apply filter
         filtdata=bandpassfilter(filtdata, self.framerate, order, [self.filt_highpass, self.filt_lowpass])
-        filters.append(f'Bandpass filter: {self.sp_bandpasshigh.value()}, {self.sp_bandpasslow.value()}; order: {order}')
+        filters.append(f'Bandpass filter: {self.filt_highpass}, {self.filt_lowpass}; order: {order}')
     elif self.ch_highpass.isChecked() and not self.ch_lowpass.isChecked():
         #Apply filter
         filtdata=passfilter(filtdata, self.framerate, order, self.filt_highpass, "high")
-        filters.append(f'Highpass filter: {self.sp_bandpasshigh.value()}; order: {order}')
+        filters.append(f'Highpass filter: {self.filt_highpass}; order: {order}')
     elif not self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
         #Apply filter
         filtdata=passfilter(filtdata, self.framerate, order, self.filt_lowpass, "low")
-        filters.append(f'Lowpass filter: {self.sp_bandpasslow.value()}; order: {order}')
+        filters.append(f'Lowpass filter: {self.filt_lowpass}; order: {order}')
     #Plot filtered data
     [axis.remove() for axis in self.cnvs_filtrecording.axs]
     self.cnvs_filtrecording.axs=[]

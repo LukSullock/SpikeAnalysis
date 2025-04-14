@@ -119,6 +119,8 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_loadmarkers.clicked.connect(self.LoadMarkers)
         self.btn_loadmarkers_2.clicked.connect(self.LoadMarkers)
         self.sp_framerate.valueChanged.connect(self.FramerateChange)
+        self.sp_bandpasshigh.valueChanged.connect(self.HighpassChange)
+        self.sp_bandpasslow.valueChanged.connect(self.LowpassChange)
         self.btn_getwaveforms.clicked.connect(lambda: GUIFunctions.AverageWaveform(self))
         self.btn_getisi.clicked.connect(lambda: GUIFunctions.InterSpikeInterval(self))
         self.btn_getamplitude.clicked.connect(lambda: GUIFunctions.AmplitudeDistribution(self))
@@ -128,6 +130,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_crossch2.currentTextChanged.connect(self.CrosscorrSelectChange2)
         self.actionFile_history.triggered.connect(lambda: self.InfoMsg("History", "\n".join(self.history)))
         self.actionBatch_analysis.triggered.connect(self.BatchWindow)
+        self.Btn_Exit.clicked.connect(self.close)
         
         #Set labels
         self.lbl_order.setText(str(self.order))
@@ -519,6 +522,13 @@ class Main(QMainWindow, Ui_MainWindow):
         """Method to update the framerate."""
         self.framerate=self.sp_framerate.value()
         
+    def HighpassChange(self):
+        """Method to update the high-pass filter"""
+        self.filt_highpass=self.sp_bandpasshigh.value()
+    def LowpassChange(self):
+        """Method to update the low-pass filter"""
+        self.filt_lowpass=self.sp_bandpasslow.value()
+    
     def CrosscorrSelectChange1(self):
         """Method to update the selectable clusters based on the selected channel of the first cluster."""
         if len(self.clusters)==0:
