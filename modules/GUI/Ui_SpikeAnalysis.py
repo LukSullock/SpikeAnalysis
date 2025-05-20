@@ -36,6 +36,8 @@ class Ui_MainWindow(object):
         self.actionBatch_analysis.setObjectName(u"actionBatch_analysis")
         self.actionFile_history = QAction(MainWindow)
         self.actionFile_history.setObjectName(u"actionFile_history")
+        self.actionReset = QAction(MainWindow)
+        self.actionReset.setObjectName(u"actionReset")
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.gridLayout_13 = QGridLayout(self.centralwidget)
@@ -699,6 +701,8 @@ class Ui_MainWindow(object):
         self.menuMenu.addAction(self.actionBatch_analysis)
         self.menuMenu.addSeparator()
         self.menuMenu.addAction(self.actionFile_history)
+        self.menuMenu.addSeparator()
+        self.menuMenu.addAction(self.actionReset)
 
         self.retranslateUi(MainWindow)
 
@@ -715,6 +719,7 @@ class Ui_MainWindow(object):
         self.actionImport_file.setText(QCoreApplication.translate("MainWindow", u"Import file...", None))
         self.actionBatch_analysis.setText(QCoreApplication.translate("MainWindow", u"Batch analysis", None))
         self.actionFile_history.setText(QCoreApplication.translate("MainWindow", u"File history", None))
+        self.actionReset.setText(QCoreApplication.translate("MainWindow", u"Reset", None))
 #if QT_CONFIG(tooltip)
         self.tabWidget.setToolTip("")
 #endif // QT_CONFIG(tooltip)

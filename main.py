@@ -20,4 +20,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 from modules.GUI.GUIMain import start as Gui
 
 if __name__=="__main__":
-    Gui()
+    launch=1
+    while launch:
+        launch=Gui()

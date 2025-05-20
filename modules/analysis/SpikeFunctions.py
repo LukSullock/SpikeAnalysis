@@ -106,7 +106,7 @@ def OpenRecording(folder, filename):
         clusters=defaults["Clusters"]
         history=defaults["History"]
         identifier=defaults["Identifier"]
-        channels=[f'Channel {ii+1}' for ii in range(ch)]
+        channels=np.array([f'Channel {ii+1}' for ii in range(ch)])
     elif ".npz" in filename[-4:]: #SpikeAnalysis tool saved data
         npzfile=np.load(file, allow_pickle=True)
         loaddata=[]
@@ -162,8 +162,7 @@ def bandpassfilter(data, framerate, order, frequencies):
     #Calculate bandpass filter coefficients for a matlabstyle iir filter
     b, a = butter(order, [freq/nyq for freq in frequencies], btype='band')
     #Apply filter
-    filtdata=[filtfilt(b,a, channel) for channel in data]
-    return filtdata
+    return np.array([filtfilt(b,a, channel) for channel in data])
 
 def notchfilter(data, framerate, quality, frequency):
     """
@@ -189,8 +188,7 @@ def notchfilter(data, framerate, quality, frequency):
     #Calculate notch filter coefficients for a 2nd order matlab style iir filter.
     b, a=iirnotch(frequency, quality, framerate)
     #Apply filter
-    filtdata=[filtfilt(b,a, channel) for channel in data]
-    return filtdata
+    return np.array([filtfilt(b,a, channel) for channel in data])
 
 def passfilter(data, framerate, order, frequency, highlow):
     """
@@ -220,8 +218,7 @@ def passfilter(data, framerate, order, frequency, highlow):
     #Calculate highpass filter coefficients for a matlabstyle iir filter
     b, a = butter(order, frequency/nyq, btype=highlow)
     #Apply filter
-    filtdata=[filtfilt(b,a, channel) for channel in data]
-    return filtdata
+    return np.array([filtfilt(b,a, channel) for channel in data])
 
 def find_peaks(data, threshold, offset=0, subthresh=0.8):
     """
@@ -292,7 +289,7 @@ def SpikeSorting(DataSelection,thresholds,subthresh,framerate,time,cutoff_thresh
     DataSelection : list
         A list containing the signal data in the selected time frames per channel.
     thresholds : list
-        List containing the thresholds, ordered from largest to smallest.
+        List containing the thresholds, ordered from the absolute value of the largest to the absolute value of the smallest.
     subthresh : float
         Float determining how far the signal needs to go below the threshold before searching for a new spike.
     framerate : int
@@ -313,7 +310,6 @@ def SpikeSorting(DataSelection,thresholds,subthresh,framerate,time,cutoff_thresh
     if type(cutoff_thresh)==int:
         for ii in range(len(DataSelection)):
             th = cutoff_thresh
-            #cutoff1[ii] = sp.signal.find_peaks(DataSelection[ii], height=th, distance=distance*framerate, prominence=0)
             cutoff1[ii], _ = find_peaks(DataSelection[ii], threshold=th, subthresh=subthresh)
         
     cl2=[[] for _ in range(len(DataSelection))]

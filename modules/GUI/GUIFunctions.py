@@ -262,7 +262,7 @@ def ApplyDataSel(self):
     self.data=data
     #Update channel names
     channelsel=[True if cb.isChecked() else False for cb in self.cbs_channels]
-    self.channels=[self.channels[ii] for ii, val in enumerate(channelsel) if val]
+    self.channels=np.array([str(self.channels[ii]) for ii, val in enumerate(channelsel) if val])
     #Add new channels in data selection tab
     for ii in reversed(range(len(self.cbs_channels))):
         self.cbs_channels[ii].setParent(None)
@@ -281,10 +281,39 @@ def ApplyDataSel(self):
     stoptimes=[str(time) for time in stoptimes]
     self.history.append(np.array(f'Data selection: {", ".join([str(ch) for ch in channelsel])}; {", ".join(starttimes)}; {", ".join(stoptimes)}'))
 
+
+def SpikeSortingNoThr(self):
+    """Function to Plot the data from Data selection in the Spike Sorting plot"""
+    self.btn_spikesort.setEnabled(False)
+    self.btn_spikesort.setStyleSheet(u"background-color: rgb(93, 93, 93);")
+    self.btn_spikesort.repaint()
+    #Clear plot, then plot data in spike sorting tab
+    size=self.data.shape[0]
+    [axis.remove() for axis in self.cnvs_spikesort.axs]
+    self.cnvs_spikesort.axs=[]
+    self.cnvs_spikesort.axs=[self.cnvs_spikesort.fig.add_subplot(size,1,1)]
+    [self.cnvs_spikesort.axs.append(self.cnvs_spikesort.fig.add_subplot(size,1,ii+2,sharex=self.cnvs_spikesort.axs[0],sharey=self.cnvs_spikesort.axs[0])) for ii in range(size-1)]
+    [self.cnvs_spikesort.axs[ii].plot(self.time, chdata, color="k") for ii,chdata in enumerate(self.data)]
+    
+    #Plot markers
+    vlines=[]
+    colours=itertools.cycle(TABLEAU_COLORS)
+    for ii,key in enumerate(self.markers.keys()):
+        clr=next(colours)
+        if len(self.markers[key])==1:
+            vlines.append([self.markers[key], clr])
+        else:
+            [vlines.append([submark,clr]) for submark in self.markers[key]]
+    [[self.cnvs_spikesort.axs[ii].axvline(line[0], color=line[1]) for line in vlines] for ii,_ in enumerate(self.data)]
+    self.cnvs_spikesort.fig.text(0.01, 0.5, "Amplitude (A.U.)", va="center", rotation="vertical")
+    self.cnvs_spikesort.fig.text(0.5, 0.02, "Time (s)", ha="center")
+    self.cnvs_spikesort.draw()
+    self.btn_spikesort.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+    self.btn_spikesort.setEnabled(True)
+
 def SpikeSort(self, cutoff, recurrence=0.80):
     """
-    Function to find and sort spikes into clusters based on the selected thresholds.
-    Plots the cluster data in the Spike sorting tab.
+    Function to plot the cluster data in the Spike sorting tab.
 
     Parameters
     ----------
@@ -319,10 +348,9 @@ def SpikeSort(self, cutoff, recurrence=0.80):
             [vlines.append([submark,clr]) for submark in self.markers[key]]
     [[self.cnvs_spikesort.axs[ii].axvline(line[0], color=line[1]) for line in vlines] for ii,_ in enumerate(self.data)]
     #Plot clusters
-    colours=itertools.cycle(TABLEAU_COLORS)
     for ii, chan in enumerate(self.clusters):
         for jj, clus in enumerate(chan):
-            self.cnvs_spikesort.axs[ii].scatter(clus[1], clus[3], color=next(colours), marker='o', label=f'Cluster {clus[4][0]}')
+            self.cnvs_spikesort.axs[ii].scatter(clus[1], clus[3], color=thresholds[jj][1], marker='o', label=f'Cluster {clus[4][0]}')
     [self.cnvs_spikesort.axs[ii].legend(frameon=False) for ii, _ in enumerate(self.cnvs_spikesort.axs)]
     self.cnvs_spikesort.fig.text(0.01, 0.5, "Amplitude (A.U.)", va="center", rotation="vertical")
     self.cnvs_spikesort.fig.text(0.5, 0.02, "Time (s)", ha="center")
@@ -334,7 +362,6 @@ def SpikeSort(self, cutoff, recurrence=0.80):
     [self.cnvs_spikesortpre.axs[ii].plot(self.time, chdata, color="k") for ii,chdata in enumerate(self.data)]
     #Plot markers
     vlines=[]
-    colours=itertools.cycle(TABLEAU_COLORS)
     for ii,key in enumerate(self.markers.keys()):
         clr=next(colours)
         if len(self.markers[key])==1:
@@ -343,10 +370,10 @@ def SpikeSort(self, cutoff, recurrence=0.80):
             [vlines.append([submark,clr]) for submark in self.markers[key]]
     [[self.cnvs_spikesortpre.axs[ii].axvline(line[0], color=line[1]) for line in vlines] for ii,_ in enumerate(self.data)]
     #Plot clusters
-    colours=itertools.cycle(TABLEAU_COLORS)
     for ii, chan in enumerate(self.clusters):
+        colours=itertools.cycle(TABLEAU_COLORS)
         for jj, clus in enumerate(chan):
-            self.cnvs_spikesortpre.axs[ii].scatter(clus[1], clus[2], color=next(colours), marker='o')
+            self.cnvs_spikesortpre.axs[ii].scatter(clus[1], clus[2], color=thresholds[jj][1], marker='o')
     #Plot thresholds, and cut-off threshold
     for line in thresholds:
         for ii in range(size):
@@ -391,7 +418,7 @@ def AverageWaveform(self, min_val=5, max_val=10):
             #Get y-values for every spike in the cluster
             for spike in clus[1]:
                 spike=spike[~np.isnan(spike)]
-                if spike:
+                if spike.size>0:
                     wvf_y=self.data[ii][int(spike*self.framerate-(min_val*self.framerate/1000)):int(spike*self.framerate+(max_val*self.framerate/1000))]
                     if len(wvf_y)==len(wvf_x):
                         all_wvf_cl.append([wvf_y, 0.5, 0.3, next(colours)])
@@ -410,7 +437,7 @@ def AverageWaveform(self, min_val=5, max_val=10):
             #If there is no data, plot text notifying the user of that.
             else:
                 text.append(f"Not enough data\nGot {len(all_wvf_cl)} datapoints\nAtleast 1 datapoint is required.")
-                self.cnvss_averagewave[-1].axs[0].text(0.5, 0.6, text,
+                self.cnvss_averagewave[-1].axs[0].text(0.5, 0.6, text[-1],
                                                        horizontalalignment="center",
                                                        verticalalignment="center")
             self.plt_container_waveforms.addTab(self.plt_container_averagewaves[-1], f'{self.fulldata["Channels"][ii]} Cluster {clus[4][0]}')
@@ -439,11 +466,11 @@ def InterSpikeInterval(self):
     if any([any([any(cl) for cl in chan]) for chan in isispike_times]):
         maxval=[[max(cl, default=100) for cl in chan] for chan in isispike_times]
         maxval=int(math.ceil(max(sum(maxval, []))/100))*100
-        bins=np.logspace(np.log10(1),np.log10(maxval),50)
+        bins=np.logspace(np.log10(1),np.log10(maxval), self.isi_bincount)
         weights=[[np.ones_like(spikeset)/len(spikeset) for spikeset in ch] for ch in isispike_times]
     #Plot interspike intervals
-    colours=itertools.cycle(TABLEAU_COLORS)
     for ii, chan in enumerate(isispike_times):
+        colours=itertools.cycle(TABLEAU_COLORS)
         for jj, spikeset in enumerate(chan):
             if len(spikeset):
                 self.cnvs_isi.axs[ii].hist(spikeset, bins, weights=weights[ii][jj], color=next(colours), alpha=0.5, label=f'{self.fulldata["Channels"][ii]} Cluster {self.clusters[ii][jj][4][0]}', ec='black')
@@ -462,23 +489,23 @@ def AmplitudeDistribution(self):
     self.btn_getamplitude.repaint()
     #Clear plot and add subplots
     size=self.data.shape[0]
-    [axis.remove() for axis in self.cnvs_isi.axs]
+    [axis.remove() for axis in self.cnvs_amplitudedis.axs]
     self.cnvs_amplitudedis.axs=[]
     self.cnvs_amplitudedis.axs=[self.cnvs_amplitudedis.fig.add_subplot(size,1,1)]
     [self.cnvs_amplitudedis.axs.append(self.cnvs_amplitudedis.fig.add_subplot(size,1,ii+2,sharex=self.cnvs_amplitudedis.axs[0],sharey=self.cnvs_amplitudedis.axs[0])) for ii in range(size-1)]
     #Extract peak heights
-    spike_amp_cl = [[cl[2] for cl in chan] for chan in self.clusters]
+    spike_amp_cl = [[[x for x in cl[2] if ~np.isnan(x)] for cl in chan] for chan in self.clusters]
     #Create bins and weights if there are any values
     if any([any([any(cl) for cl in chan]) for chan in spike_amp_cl]):
         maxval=[[max(cl, default=100) for cl in chan] for chan in spike_amp_cl]
         maxval=int(math.ceil(max(sum(maxval, []))/100))*100
         minval=[[min(cl, default=100) for cl in chan] for chan in spike_amp_cl]
         minval=int(math.floor(min(sum(minval, []))/100))*100
-        bins=np.arange(minval,maxval,(maxval-minval)/40)
+        bins=np.linspace(minval, maxval, self.ampdis_bincount)
         weights=[[np.ones_like(spikeset)/len(spikeset) for spikeset in ch] for ch in spike_amp_cl]
     #Plot amplitude distribution
-    colours=itertools.cycle(TABLEAU_COLORS)
     for ii, chan in enumerate(spike_amp_cl):
+        colours=itertools.cycle(TABLEAU_COLORS)
         for jj, spikeset in enumerate(chan):
             if len(spikeset):
                 self.cnvs_amplitudedis.axs[ii].hist(spikeset, bins, weights=weights[ii][jj], color=next(colours), alpha=0.5, label=f'{self.fulldata["Channels"][ii]} Cluster {self.clusters[ii][jj][4][0]}', ec='black')
@@ -489,7 +516,7 @@ def AmplitudeDistribution(self):
     self.btn_getamplitude.setEnabled(True)
     self.btn_getamplitude.setStyleSheet(u"background-color: rgb(0, 255, 0);")
 
-def cross_correlate(spikeset1, spikeset2, interval):
+def cross_correlate(spikeset1, spikeset2, interval, binsize, preinterval=0):
     """
     Function to calculate cross-correlation.
     Giving the same spikeset twice will calculate auto-correlation.
@@ -510,15 +537,17 @@ def cross_correlate(spikeset1, spikeset2, interval):
 
     """
     cross = np.zeros(int(2*interval+1), 'd') #prepare array filled with zeros
+    #cross = np.zeros(int(np.ceil(2*max(preinterval, interval)/binsize+1)), 'd')
     startint=0 #index at which spike search is started
     for spike in spikeset1:
         ii=startint
         #Look for the index of the first spike in spikeset2 that is within the interval
-        while ii<len(spikeset2) and spikeset2[ii]-spike<-interval:
+        while ii<len(spikeset2) and spikeset2[ii]-spike<-max(preinterval, interval):
             ii+=1
         startint=ii #update startint to skip values that are certain to be outside the interval of the next spike
         #Add spikes to the correct bins
-        while ii<len(spikeset2) and spikeset2[ii]-spike<=interval:
+        while ii<len(spikeset2) and spikeset2[ii]-spike<=max(preinterval, interval):
+            #int(np.ceil(ii/binsize))
             cross[int(spikeset2[ii]-spike+interval)]+=1
             ii+=1
     return cross
@@ -543,7 +572,7 @@ def AutoCorrelation(self):
     #Extract timestamps of spikes and convert to location
     spike_times=[[[x*1000 for x in cl[1] if ~np.isnan(x)] for cl in chan] for chan in self.clusters]
     #Calculate the autocorrelation per cluster per channel
-    autocorr = [[cross_correlate(spikeset, spikeset, intervalsize*1000) for spikeset in chan] for chan in spike_times]
+    autocorr = [[cross_correlate(spikeset, spikeset, intervalsize*1000, self.autocorr_bincount) for spikeset in chan] for chan in spike_times]
     peakcounts=[[0 for cl in chan] for chan in autocorr]
     #Calculate total peaks and set the 0ms to 0 peaks for better readability
     for ii,chan in enumerate(autocorr):
@@ -558,10 +587,11 @@ def AutoCorrelation(self):
                 self.cnvss_autocorr.append(self.plt_container_autocorrs[-1].canvas)
                 self.cnvss_autocorr[-1].axs=[self.cnvss_autocorr[-1].fig.add_subplot(1,1,1)]
                 self.plt_container_autocorr.addTab(self.plt_container_autocorrs[-1], f'{self.fulldata["Channels"][ii]} Cluster {self.clusters[ii][jj][4][0]}')
-                self.cnvss_autocorr[-1].axs[ii].plot(np.arange(-spikeset.size/2, spikeset.size/2)+0.5, spikeset, color="k")
+                #change x values to corresponding bin sizes when bins are implemented
+                self.cnvss_autocorr[-1].axs[0].plot(np.arange(-spikeset.size/2, spikeset.size/2)+1, spikeset, color="k")
                 self.cnvss_autocorr[-1].fig.text(0.01, 0.5, "# of spikes", va="center", rotation="vertical")
                 self.cnvss_autocorr[-1].fig.text(0.5, 0.02, "Time (ms)", ha="center")
-                self.cnvss_autocorr[-1].axs[ii].text(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=self.cnvss_autocorr[-1].axs[0].transAxes)
+                self.cnvss_autocorr[-1].axs[0].text(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=self.cnvss_autocorr[-1].axs[0].transAxes)
                 self.cnvss_autocorr[-1].draw()
     self.btn_getautocorr.setEnabled(True)
     self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
@@ -596,8 +626,10 @@ def CrossCorrelation(self):
     clusterindx=np.where(clusterlist==self.cb_crosscl2.currentText())[0][0]
     spikeset2=np.array([x*1000 for x in self.clusters[channelindx][clusterindx][1] if ~np.isnan(x)])
     #Calculate cross-correlation
-    cross_corr=cross_correlate(spikeset1, spikeset2, intervalsize*1000)
+    #Add preinterval
+    cross_corr=cross_correlate(spikeset1, spikeset2, intervalsize*1000, self.crosscorr_bincount)
     #Plot cross-correlation
+    #change x values to corresponding bin sizes when bins are implemented
     self.cnvs_crosscorr.axs[0].plot(np.arange(-cross_corr.size/2, cross_corr.size/2)+0.5, cross_corr, color="k")
     self.cnvs_crosscorr.fig.text(0.01, 0.5, "# of spikes", va="center", rotation="vertical")
     self.cnvs_crosscorr.fig.text(0.5, 0.02, "Time (ms)", ha="center")

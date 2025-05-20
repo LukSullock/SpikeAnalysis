@@ -522,7 +522,7 @@ Note that after applying with time frames selected, filters can no longer be app
                <x>0</x>
                <y>0</y>
                <width>251</width>
-               <height>218</height>
+               <height>48</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_4">
@@ -609,8 +609,8 @@ Note that after applying with time frames selected, filters can no longer be app
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>69</width>
-               <height>235</height>
+               <width>98</width>
+               <height>40</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout">
@@ -735,8 +735,8 @@ Spikes can be detected and sorted on the basis of thresholds with a recurrence v
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>369</width>
-               <height>205</height>
+               <width>329</width>
+               <height>129</height>
               </rect>
              </property>
              <layout class="QGridLayout" name="gridLayout_6">
@@ -1276,6 +1276,8 @@ Requires spikes to be sorted.</string>
     <addaction name="actionBatch_analysis"/>
     <addaction name="separator"/>
     <addaction name="actionFile_history"/>
+    <addaction name="separator"/>
+    <addaction name="actionReset"/>
    </widget>
    <addaction name="menuMenu"/>
   </widget>
@@ -1292,6 +1294,11 @@ Requires spikes to be sorted.</string>
   <action name="actionFile_history">
    <property name="text">
     <string>File history</string>
+   </property>
+  </action>
+  <action name="actionReset">
+   <property name="text">
+    <string>Reset</string>
    </property>
   </action>
  </widget>

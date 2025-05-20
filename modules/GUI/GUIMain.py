@@ -23,11 +23,8 @@ import numpy as np
 import pandas as pd
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
-from PyQt5.QtWidgets import QMainWindow, QApplication, QSpinBox, QFileDialog, QCheckBox, QLabel, QDoubleSpinBox, QMessageBox
-if __name__=="__main__":
-    curdir=os.path.dirname(os.path.abspath(__file__))
-    pardir=os.path.dirname(os.path.dirname(curdir))
-    sys.path.append(pardir)
+from PyQt5.QtWidgets import (QMainWindow, QApplication, QSpinBox, QFileDialog,
+                             QCheckBox, QLabel, QDoubleSpinBox, QMessageBox)
 from modules.GUI.Ui_SpikeAnalysis import Ui_MainWindow
 from modules.GUI import GUIFunctions
 from modules.analysis import SpikeFunctions
@@ -36,6 +33,8 @@ class Main(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(Main, self).__init__()
         self.setupUi(self)
+        #exit code, if set to one will restart the program
+        self.exitcode=0
         #File name
         self.filename=""
         #Filters
@@ -63,6 +62,13 @@ class Main(QMainWindow, Ui_MainWindow):
         self.crosscorr_posttime=2.0
         self.crosscorr_clus1=[]
         self.crosscorr_clus2=[]
+        
+        #binsizes
+        self.isi_bincount = 50
+        self.ampdis_bincount = 50
+        self.autocorr_bincount = 50
+        self.crosscorr_bincount = 50
+        
         #Data
         self.datatype=""
         self.data=[]
@@ -131,6 +137,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.actionFile_history.triggered.connect(lambda: self.InfoMsg("History", "\n".join(self.history)))
         self.actionBatch_analysis.triggered.connect(self.BatchWindow)
         self.Btn_Exit.clicked.connect(self.close)
+        self.actionReset.triggered.connect(self.Reset)
         
         #Set labels
         self.lbl_order.setText(str(self.order))
@@ -143,7 +150,12 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_savedatasel.setEnabled(False)
         self.btn_savespikes.setEnabled(False)
         self.btn_exportcsv.setEnabled(False)
-        #Disable batch action, since that is not implemented
+        self.btn_getwaveforms.setEnabled(False)
+        self.btn_getisi.setEnabled(False)
+        self.btn_getamplitude.setEnabled(False)
+        self.btn_getautocorr.setEnabled(False)
+        self.btn_getcrosscorr.setEnabled(False)
+        #Disable batch action, since that is not implemented by default
         self.actionBatch_analysis.setEnabled(False)
         
     def NextTab(self):
@@ -205,7 +217,10 @@ class Main(QMainWindow, Ui_MainWindow):
             self.gridLayout_6.addItem(self.verticalSpacer_3, len(self.sps_thresholds)+3, 1, 1, 1)
         
     def BatchWindow(self):
-        """Method for batch analysis, not implemented yet."""
+        """
+        Method for batch analysis, not implemented by default.
+        See the wiki for how to implement this. (Add link)
+        """
         pass
     
     def LoadMarkers(self):
@@ -249,6 +264,19 @@ class Main(QMainWindow, Ui_MainWindow):
             Boolean to denote if the data should be immediately plotted, or only imported. The default is True.
 
         """
+        #Pre-disable all buttons that are meant to be disabled when the required data isn't loaded
+        self.btn_loadmarkers.setEnabled(False)
+        self.btn_loadmarkers_2.setEnabled(False)
+        self.btn_savefilt.setEnabled(False)
+        self.btn_savedatasel.setEnabled(False)
+        self.btn_savespikes.setEnabled(False)
+        self.btn_exportcsv.setEnabled(False)
+        self.btn_getwaveforms.setEnabled(False)
+        self.btn_getisi.setEnabled(False)
+        self.btn_getamplitude.setEnabled(False)
+        self.btn_getautocorr.setEnabled(False)
+        self.btn_getcrosscorr.setEnabled(False)
+        
         self.btn_import.setEnabled(False)
         self.btn_import.setStyleSheet(u"background-color: rgb(93, 93, 93);")
         self.btn_import.repaint()
@@ -296,11 +324,15 @@ class Main(QMainWindow, Ui_MainWindow):
             self.cbs_channels=[QCheckBox(f'{self.channels[ii]}', self.scrollAreaWidgetContents_3) for ii in range(self.data.shape[0])]
             [cb.setChecked(True) for cb in self.cbs_channels]
             [self.verticalLayout.insertWidget(len(self.verticalLayout)-1, cb) for cb in self.cbs_channels]
+            #Clear thresholds
+            while self.sps_thresholds:
+                self.RemoveThreshold()
             #Plot raw data in open recording tab, filters tab, and data selection tab
             if plotloadeddata:
                 GUIFunctions.ViewRaw(self)
                 GUIFunctions.ViewUnfilter(self)
                 GUIFunctions.ViewDataSel(self)
+                GUIFunctions.SpikeSortingNoThr(self)
                 if len(self.clusters)!=0:
                     cutoff_thresh=False
                     recurrence=0.80
@@ -312,7 +344,7 @@ class Main(QMainWindow, Ui_MainWindow):
                         elif "thresholds" in his:
                             thrstring=his.split(": ")[-1]
                             thresholds=[int(float(val)) for val in thrstring.split(", ")]
-                            [self.AddThreshold() for _ in range(len(thresholds)-1)]
+                            [self.AddThreshold() for _ in range(len(thresholds))]
                             [self.sps_thresholds[ii].setValue(val) for ii, val in enumerate(thresholds)]
                         elif "recurrence" in his:
                             recurrence=float(his.split(": ")[-1])
@@ -321,8 +353,6 @@ class Main(QMainWindow, Ui_MainWindow):
                     self.btn_savespikes.setEnabled(True)
                     self.btn_exportcsv.setEnabled(True)
                 else:
-                    [axis.remove() for axis in self.cnvs_spikesort.axs]
-                    self.cnvs_spikesort.axs=[]
                     [axis.remove() for axis in self.cnvs_spikesortpre.axs]
                     self.cnvs_spikesortpre.axs=[]
             else:
@@ -372,8 +402,29 @@ class Main(QMainWindow, Ui_MainWindow):
             print('Data history:')
             [print(his) for his in self.history]
             print()
+        #Enable all buttons
         self.btn_import.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_import.setEnabled(True)
+        self.btn_setfilters.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_setfilters.setEnabled(True)
+        self.btn_applyfilt.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_applyfilt.setEnabled(True)
+        self.btn_viewdatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_viewdatasel.setEnabled(True)
+        self.btn_applydatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_applydatasel.setEnabled(True)
+        self.btn_spikesort.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_spikesort.setEnabled(True)
+        #Only reset the colour of the buttons that require specific data to be loaded
+        self.btn_savefilt.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_savedatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_savespikes.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_exportcsv.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getwaveforms.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getisi.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getamplitude.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getcrosscorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
             
     def ApplyFilters(self):
         """Method to call the function required to apply filters to the stored data."""
@@ -395,6 +446,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.cb_crossch1.addItems([f'Marker {key}' for key in self.markers.keys()])
         self.cb_crossch2.clear()
         self.cb_crossch2.addItems(self.channels)
+        GUIFunctions.SpikeSortingNoThr(self)
         self.btn_savedatasel.setEnabled(True)
         self.btn_applydatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_applydatasel.setEnabled(True)
@@ -408,11 +460,13 @@ class Main(QMainWindow, Ui_MainWindow):
         #Raise warning if there are no thresholds selected
         if len(thresholds)==0:
             self.WarningMsg("Please select atleast 1 threshold.")
+            self.btn_spikesort.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+            self.btn_spikesort.setEnabled(True)
             return
         #Remove duplicates
         thresholds=list(set(thresholds))
         #Sort the list from largest to smallest
-        thresholds.sort()
+        thresholds=sorted(thresholds, key=abs)
         thresholds=thresholds[::-1]
         #Get the cut off threshold if applicable
         if self.ch_cutoff.isChecked():
@@ -434,6 +488,15 @@ class Main(QMainWindow, Ui_MainWindow):
         #Enable save buttons
         self.btn_savespikes.setEnabled(True)
         self.btn_exportcsv.setEnabled(True)
+        self.btn_getwaveforms.setEnabled(True)
+        self.btn_getisi.setEnabled(True)
+        #Enable buttons with functions dependent on cluster data
+        self.btn_getamplitude.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getamplitude.setEnabled(True)
+        self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getautocorr.setEnabled(True)
+        self.btn_getcrosscorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+        self.btn_getcrosscorr.setEnabled(True)
         self.btn_spikesort.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_spikesort.setEnabled(True)
         
@@ -584,12 +647,16 @@ class Main(QMainWindow, Ui_MainWindow):
         msg.setWindowTitle("Information")
         msg.exec_()
     
+    def Reset(self):
+        """Method to reset the GUI"""
+        self.exitcode=1
+        self.close()
+    
 def start():
     """Function to start the GUI"""
     app = QApplication(sys.argv)
     app.setQuitOnLastWindowClosed(True)
     ui = Main()
     ui.show()
-    sys.exit(app.exec())
-if __name__=="__main__":
-    start()
+    app.exec()
+    return(ui.exitcode)
