@@ -342,6 +342,9 @@ class Main(QMainWindow, Ui_MainWindow):
                             self.ch_cutoff.setChecked(True)
                             self.sp_cutoff.setValue(cutoff_thresh)
                         elif "thresholds" in his:
+                            #Clear thresholds
+                            while self.sps_thresholds:
+                                self.RemoveThreshold()
                             thrstring=his.split(": ")[-1]
                             thresholds=[int(float(val)) for val in thrstring.split(", ")]
                             [self.AddThreshold() for _ in range(len(thresholds))]
@@ -352,6 +355,11 @@ class Main(QMainWindow, Ui_MainWindow):
                     GUIFunctions.SpikeSort(self, cutoff_thresh, recurrence)
                     self.btn_savespikes.setEnabled(True)
                     self.btn_exportcsv.setEnabled(True)
+                    self.btn_getwaveforms.setEnabled(True)
+                    self.btn_getisi.setEnabled(True)
+                    self.btn_getamplitude.setEnabled(True)
+                    self.btn_getautocorr.setEnabled(True)
+                    self.btn_getcrosscorr.setEnabled(True)
                 else:
                     [axis.remove() for axis in self.cnvs_spikesortpre.axs]
                     self.cnvs_spikesortpre.axs=[]
@@ -526,12 +534,13 @@ class Main(QMainWindow, Ui_MainWindow):
         filedialog.selectFile(f'{self.filename[:-4]}_{extension}')
         if filedialog.exec():
             file=filedialog.selectedFiles()[0]
+            savehis=np.empty(len(self.history), dtype=type(np.array))
             maxhislen=0
             for his in self.history:
                 if len(str(his))>maxhislen:
                     maxhislen=len(str(his))
             for ii, _ in enumerate(self.history):
-                self.history[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
+                savehis[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
             self.fulldata={"Datatype": self.datatype,
                            "Data": self.data,
                            "Framerate": self.framerate,

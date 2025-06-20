@@ -150,7 +150,7 @@ def ApplyFilter(self):
         self.WarningMsg("Please select atleast one channel.")
         return
     #Update history
-    [self.history.append(np.array(filt)) for filt in filters]
+    [self.history.append(filt) for filt in filters]
 
 def UpdateMarkers(self, starttimes, stoptimes, fdata):
     """
@@ -279,7 +279,7 @@ def ApplyDataSel(self):
     #Update history
     starttimes=[str(time) for time in starttimes]
     stoptimes=[str(time) for time in stoptimes]
-    self.history.append(np.array(f'Data selection: {", ".join([str(ch) for ch in channelsel])}; {", ".join(starttimes)}; {", ".join(stoptimes)}'))
+    self.history.append(f'Data selection: {", ".join([str(ch) for ch in channelsel])}; {", ".join(starttimes)}; {", ".join(stoptimes)}')
 
 
 def SpikeSortingNoThr(self):
@@ -548,7 +548,7 @@ def cross_correlate(spikeset1, spikeset2, interval, binsize, preinterval=0):
         #Add spikes to the correct bins
         while ii<len(spikeset2) and spikeset2[ii]-spike<=max(preinterval, interval):
             #int(np.ceil(ii/binsize))
-            cross[int(spikeset2[ii]-spike+interval)]+=1
+            cross[int(spikeset2[ii]-spike+interval)]+=1 #change interval to preinterval when implementing variable interval sizes on both sides
             ii+=1
     return cross
 
@@ -588,10 +588,11 @@ def AutoCorrelation(self):
                 self.cnvss_autocorr[-1].axs=[self.cnvss_autocorr[-1].fig.add_subplot(1,1,1)]
                 self.plt_container_autocorr.addTab(self.plt_container_autocorrs[-1], f'{self.fulldata["Channels"][ii]} Cluster {self.clusters[ii][jj][4][0]}')
                 #change x values to corresponding bin sizes when bins are implemented
-                self.cnvss_autocorr[-1].axs[0].plot(np.arange(-spikeset.size/2, spikeset.size/2)+1, spikeset, color="k")
+                self.cnvss_autocorr[-1].axs[0].plot(np.arange(0, spikeset.size/2-1), spikeset[int(spikeset.size/2):-1], color="k")
                 self.cnvss_autocorr[-1].fig.text(0.01, 0.5, "# of spikes", va="center", rotation="vertical")
                 self.cnvss_autocorr[-1].fig.text(0.5, 0.02, "Time (ms)", ha="center")
-                self.cnvss_autocorr[-1].axs[0].text(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=self.cnvss_autocorr[-1].axs[0].transAxes)
+                #self.cnvss_autocorr[-1].axs[0].set_title(0.05, 0.93, f'N={peakcounts[ii][jj]}', transform=self.cnvss_autocorr[-1].axs[0].transAxes)
+                self.cnvss_autocorr[-1].axs[0].set_title(f'N={peakcounts[ii][jj]}')
                 self.cnvss_autocorr[-1].draw()
     self.btn_getautocorr.setEnabled(True)
     self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
