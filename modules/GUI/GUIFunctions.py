@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 """
 import scipy as sp
 import numpy as np
+import pandas as pd
 import itertools
 import math
 from copy import deepcopy
@@ -26,7 +27,11 @@ from PyQt5.QtWidgets import QCheckBox
 from collections import defaultdict
 from matplotlib.colors import TABLEAU_COLORS
 from modules.GUI.QtMplCanvas import QtCanvas
-from modules.analysis.SpikeFunctions import bandpassfilter, notchfilter, passfilter
+from modules.analysis import SpikeFunctions
+
+def ImportData(self, directory):
+    self.data, self.clusters, self.markers, self.time, self.framerate, self.datatype, self.history, self.identifier, self.channels, nomarker=SpikeFunctions.OpenRecording(directory, self.filename)
+    return nomarker
 
 def ViewRaw(self):
     """Function to plot the raw data in the Import recording tab."""
@@ -96,19 +101,19 @@ def ViewFilter(self, quality=30, order=2):
     filters=[]
     if self.ch_notch.isChecked():
         #Apply filter
-        filtdata=notchfilter(filtdata, self.framerate, quality, self.sp_notch.value())
+        filtdata=SpikeFunctions.notchfilter(filtdata, self.framerate, quality, self.sp_notch.value())
         filters.append(f'Notch filter: {self.sp_notch.value()}; quality: {quality}; order: 2')
     if self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
         #Apply filter
-        filtdata=bandpassfilter(filtdata, self.framerate, order, [self.filt_highpass, self.filt_lowpass])
+        filtdata=SpikeFunctions.bandpassfilter(filtdata, self.framerate, order, [self.filt_highpass, self.filt_lowpass])
         filters.append(f'Bandpass filter: {self.filt_highpass}, {self.filt_lowpass}; order: {order}')
     elif self.ch_highpass.isChecked() and not self.ch_lowpass.isChecked():
         #Apply filter
-        filtdata=passfilter(filtdata, self.framerate, order, self.filt_highpass, "high")
+        filtdata=SpikeFunctions.passfilter(filtdata, self.framerate, order, self.filt_highpass, "high")
         filters.append(f'Highpass filter: {self.filt_highpass}; order: {order}')
     elif not self.ch_highpass.isChecked() and self.ch_lowpass.isChecked():
         #Apply filter
-        filtdata=passfilter(filtdata, self.framerate, order, self.filt_lowpass, "low")
+        filtdata=SpikeFunctions.passfilter(filtdata, self.framerate, order, self.filt_lowpass, "low")
         filters.append(f'Lowpass filter: {self.filt_lowpass}; order: {order}')
     #Plot filtered data
     [axis.remove() for axis in self.cnvs_filtrecording.axs]
@@ -310,6 +315,9 @@ def SpikeSortingNoThr(self):
     self.cnvs_spikesort.draw()
     self.btn_spikesort.setStyleSheet(u"background-color: rgb(0, 255, 0);")
     self.btn_spikesort.setEnabled(True)
+
+def SpikeData(self, thresholds, cutoff_thresh):
+    self.clusters=SpikeFunctions.SpikeSorting(self.data, thresholds, self.dsp_recurrence.value(), self.framerate, self.time, cutoff_thresh)
 
 def SpikeSort(self, cutoff, recurrence=0.80):
     """
@@ -516,42 +524,6 @@ def AmplitudeDistribution(self):
     self.btn_getamplitude.setEnabled(True)
     self.btn_getamplitude.setStyleSheet(u"background-color: rgb(0, 255, 0);")
 
-def cross_correlate(spikeset1, spikeset2, interval, binsize, preinterval=0):
-    """
-    Function to calculate cross-correlation.
-    Giving the same spikeset twice will calculate auto-correlation.
-
-    Parameters
-    ----------
-    spikeset1 : list of int
-        First set of spike timings in frames.
-    spikeset2 : list of int
-        Second set of spike timings in frames.
-    interval : int
-        Interval in frames to calculate cross-correlation in.
-
-    Returns
-    -------
-    cross : numpy.array
-        Array containing the amount of spikes at a given relative datapoint.
-
-    """
-    cross = np.zeros(int(2*interval+1), 'd') #prepare array filled with zeros
-    #cross = np.zeros(int(np.ceil(2*max(preinterval, interval)/binsize+1)), 'd')
-    startint=0 #index at which spike search is started
-    for spike in spikeset1:
-        ii=startint
-        #Look for the index of the first spike in spikeset2 that is within the interval
-        while ii<len(spikeset2) and spikeset2[ii]-spike<-max(preinterval, interval):
-            ii+=1
-        startint=ii #update startint to skip values that are certain to be outside the interval of the next spike
-        #Add spikes to the correct bins
-        while ii<len(spikeset2) and spikeset2[ii]-spike<=max(preinterval, interval):
-            #int(np.ceil(ii/binsize))
-            cross[int(spikeset2[ii]-spike+interval)]+=1 #change interval to preinterval when implementing variable interval sizes on both sides
-            ii+=1
-    return cross
-
 def AutoCorrelation(self):
     """
     Function to plot the auto-correlation for every cluster in the Auto-correlation tab.
@@ -572,7 +544,7 @@ def AutoCorrelation(self):
     #Extract timestamps of spikes and convert to location
     spike_times=[[[x*1000 for x in cl[1] if ~np.isnan(x)] for cl in chan] for chan in self.clusters]
     #Calculate the autocorrelation per cluster per channel
-    autocorr = [[cross_correlate(spikeset, spikeset, intervalsize*1000, self.autocorr_bincount) for spikeset in chan] for chan in spike_times]
+    autocorr = [[SpikeFunctions.cross_correlate(spikeset, spikeset, intervalsize*1000, self.autocorr_bincount) for spikeset in chan] for chan in spike_times]
     peakcounts=[[0 for cl in chan] for chan in autocorr]
     #Calculate total peaks and set the 0ms to 0 peaks for better readability
     for ii,chan in enumerate(autocorr):
@@ -628,7 +600,7 @@ def CrossCorrelation(self):
     spikeset2=np.array([x*1000 for x in self.clusters[channelindx][clusterindx][1] if ~np.isnan(x)])
     #Calculate cross-correlation
     #Add preinterval
-    cross_corr=cross_correlate(spikeset1, spikeset2, intervalsize*1000, self.crosscorr_bincount)
+    cross_corr=SpikeFunctions.cross_correlate(spikeset1, spikeset2, intervalsize*1000, self.crosscorr_bincount)
     #Plot cross-correlation
     #change x values to corresponding bin sizes when bins are implemented
     self.cnvs_crosscorr.axs[0].plot(np.arange(-cross_corr.size/2, cross_corr.size/2)+0.5, cross_corr, color="k")
@@ -637,3 +609,60 @@ def CrossCorrelation(self):
     self.cnvs_crosscorr.draw()
     self.btn_getcrosscorr.setEnabled(True)
     self.btn_getcrosscorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
+
+def SaveData(self, file):
+    """
+    Function to save the stored data to a file.
+
+    Parameters
+    ----------
+    extension : str
+        String that denotes the save file location.
+
+    """
+    savehis=np.empty(len(self.history), dtype=type(np.array))
+    maxhislen=0
+    for his in self.history:
+        if len(str(his))>maxhislen:
+            maxhislen=len(str(his))
+    for ii, _ in enumerate(self.history):
+        savehis[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
+    self.fulldata={"Datatype": self.datatype,
+                   "Data": self.data,
+                   "Framerate": self.framerate,
+                   "Time": self.time,
+                   "Markers": dict(self.markers),
+                   "Clusters": self.clusters,
+                   "History": self.history,
+                   "Channels": self.channels,
+                   "Identifier": self.identifier}
+    np.savez(file, allow_pickle=True, **self.fulldata)
+    print("data saved")
+
+def ExportAsCSV(self, file):
+    """
+    Function to export cluster data to a .csv file.
+
+    Parameters
+    ----------
+    file : str
+        String that denotes the save file location.
+        
+    """
+    self.fulldata={"Datatype": self.datatype,
+                   "Data": self.data,
+                   "Framerate": self.framerate,
+                   "Time": self.time,
+                   "Markers": dict(self.markers),
+                   "Clusters": self.clusters,
+                   "History": self.history,
+                   "Channels": self.channels,
+                   "Identifier": self.identifier}
+    #Create dataframe with first column containing file info
+    fdf=pd.DataFrame({"File info": [self.datatype, self.framerate, self.identifier]+self.history})
+    #Add a columns per cluster with timestamps of spikes
+    for ii,channel in enumerate(self.clusters):
+        for clus in channel:
+            sdf=pd.DataFrame({f'{self.fulldata["Channels"][ii]} Cluster {clus[4][0]}': clus[1][~np.isnan(clus[1])]})
+            fdf=pd.concat([fdf,sdf], axis=1)
+    fdf.to_csv(file, index=False)

@@ -340,3 +340,39 @@ def SpikeSorting(DataSelection,thresholds,subthresh,framerate,time,cutoff_thresh
             for kk in range(len(clusters[ii][jj])):
                 clusters[ii][jj][kk]=np.append(clusters[ii][jj][kk], np.zeros(maxsize-len(clusters[ii][jj][kk]))+np.nan)
     return clusters
+
+def cross_correlate(spikeset1, spikeset2, interval, binsize, preinterval=0):
+    """
+    Function to calculate cross-correlation.
+    Giving the same spikeset twice will calculate auto-correlation.
+
+    Parameters
+    ----------
+    spikeset1 : list of int
+        First set of spike timings in frames.
+    spikeset2 : list of int
+        Second set of spike timings in frames.
+    interval : int
+        Interval in frames to calculate cross-correlation in.
+
+    Returns
+    -------
+    cross : numpy.array
+        Array containing the amount of spikes at a given relative datapoint.
+
+    """
+    cross = np.zeros(int(2*interval+1), 'd') #prepare array filled with zeros
+    #cross = np.zeros(int(np.ceil(2*max(preinterval, interval)/binsize+1)), 'd')
+    startint=0 #index at which spike search is started
+    for spike in spikeset1:
+        ii=startint
+        #Look for the index of the first spike in spikeset2 that is within the interval
+        while ii<len(spikeset2) and spikeset2[ii]-spike<-max(preinterval, interval):
+            ii+=1
+        startint=ii #update startint to skip values that are certain to be outside the interval of the next spike
+        #Add spikes to the correct bins
+        while ii<len(spikeset2) and spikeset2[ii]-spike<=max(preinterval, interval):
+            #int(np.ceil(ii/binsize))
+            cross[int(spikeset2[ii]-spike+interval)]+=1 #change interval to preinterval when implementing variable interval sizes on both sides
+            ii+=1
+    return cross

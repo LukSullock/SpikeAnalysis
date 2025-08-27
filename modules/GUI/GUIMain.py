@@ -20,14 +20,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 import sys
 import os
 import numpy as np
-import pandas as pd
 from collections import defaultdict
 from decimal import Decimal, ROUND_HALF_UP
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QSpinBox, QFileDialog,
                              QCheckBox, QLabel, QDoubleSpinBox, QMessageBox)
 from modules.GUI.Ui_SpikeAnalysis import Ui_MainWindow
 from modules.GUI import GUIFunctions
-from modules.analysis import SpikeFunctions
  
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self):
@@ -223,36 +221,6 @@ class Main(QMainWindow, Ui_MainWindow):
         """
         pass
     
-    def LoadMarkers(self):
-        """Method to load a marker file. Marker file to be imported is chosen within the method."""
-        filedialog=QFileDialog(self)
-        filedialog.setWindowTitle("Open file...")
-        filedialog.setNameFilters(["Text file (*.txt)"])
-        if filedialog.exec():
-            file=filedialog.selectedFiles()[0]
-            with open(file, encoding="utf8") as csvfile:
-                markersCSV=np.genfromtxt(csvfile, delimiter=',')
-            self.markers=defaultdict(list)
-            for key in markersCSV:
-                self.markers[key[0]].append(key[1])
-            starttimes=[]
-            stoptimes=[]
-            for his in self.history:
-                if "Data selection" in his:
-                    starttimesstr=his.split(";")[-2]
-                    stoptimesstr=his.split(";")[-1]
-                    for start in starttimesstr.split(", "):
-                        starttimes.append(float(start))
-                    for stop in stoptimesstr.split(", "):
-                        stoptimes.append(float(stop))
-            _, self.markers=GUIFunctions.UpdateMarkers(self, starttimes, stoptimes, self.data)
-            self.fulldata["Markers"]=self.markers
-            GUIFunctions.ViewDataSel(self)
-            self.cb_crossch1.clear()
-            self.cb_crossch1.addItems(self.channels)
-            self.cb_crossch1.addItems([f'Marker {key}' for key in self.markers.keys()])
-            self.cb_crossch2.clear()
-            self.cb_crossch2.addItems(self.channels)
     def LoadData(self, plotloadeddata=True):
         """
         Method to load in data. Imported file is chosen within the method.
@@ -289,7 +257,8 @@ class Main(QMainWindow, Ui_MainWindow):
             file=filedialog.selectedFiles()[0]
             self.filename=file.split("/")[-1]
             direc=os.path.dirname(file)
-            self.data, self.clusters, self.markers, self.time, self.framerate, self.datatype, self.history, self.identifier, self.channels, nomarker=SpikeFunctions.OpenRecording(direc, self.filename)
+            #filename is called in GUIFunctions, and data is set within GUIFunctions as well
+            nomarker=GUIFunctions.ImportData(self, direc)
             self.history=list(self.history)
             if nomarker:
                 self.lbl_markersloaded.setText("No markers")            
@@ -433,7 +402,37 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_getamplitude.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_getautocorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_getcrosscorr.setStyleSheet(u"background-color: rgb(0, 255, 0);")
-            
+    def LoadMarkers(self):
+        """Method to load a marker file. Marker file to be imported is chosen within the method."""
+        filedialog=QFileDialog(self)
+        filedialog.setWindowTitle("Open file...")
+        filedialog.setNameFilters(["Text file (*.txt)"])
+        if filedialog.exec():
+            file=filedialog.selectedFiles()[0]
+            with open(file, encoding="utf8") as csvfile:
+                markersCSV=np.genfromtxt(csvfile, delimiter=',')
+            self.markers=defaultdict(list)
+            for key in markersCSV:
+                self.markers[key[0]].append(key[1])
+            starttimes=[]
+            stoptimes=[]
+            for his in self.history:
+                if "Data selection" in his:
+                    starttimesstr=his.split(";")[-2]
+                    stoptimesstr=his.split(";")[-1]
+                    for start in starttimesstr.split(", "):
+                        starttimes.append(float(start))
+                    for stop in stoptimesstr.split(", "):
+                        stoptimes.append(float(stop))
+            _, self.markers=GUIFunctions.UpdateMarkers(self, starttimes, stoptimes, self.data)
+            self.fulldata["Markers"]=self.markers
+            GUIFunctions.ViewDataSel(self)
+            self.cb_crossch1.clear()
+            self.cb_crossch1.addItems(self.channels)
+            self.cb_crossch1.addItems([f'Marker {key}' for key in self.markers.keys()])
+            self.cb_crossch2.clear()
+            self.cb_crossch2.addItems(self.channels)
+    
     def ApplyFilters(self):
         """Method to call the function required to apply filters to the stored data."""
         self.btn_applyfilt.setEnabled(False)
@@ -482,7 +481,7 @@ class Main(QMainWindow, Ui_MainWindow):
         else:
             cutoff_thresh=False
         #Get spike data and sort into clusters
-        self.clusters=SpikeFunctions.SpikeSorting(self.data, thresholds, self.dsp_recurrence.value(), self.framerate, self.time, cutoff_thresh)
+        GUIFunctions.SpikeData(self, thresholds, cutoff_thresh)
         #Plot spike sorting
         GUIFunctions.SpikeSort(self, cutoff_thresh, self.dsp_recurrence.value())
         self.CrosscorrSelectChange1()
@@ -534,24 +533,7 @@ class Main(QMainWindow, Ui_MainWindow):
         filedialog.selectFile(f'{self.filename[:-4]}_{extension}')
         if filedialog.exec():
             file=filedialog.selectedFiles()[0]
-            savehis=np.empty(len(self.history), dtype=type(np.array))
-            maxhislen=0
-            for his in self.history:
-                if len(str(his))>maxhislen:
-                    maxhislen=len(str(his))
-            for ii, _ in enumerate(self.history):
-                savehis[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
-            self.fulldata={"Datatype": self.datatype,
-                           "Data": self.data,
-                           "Framerate": self.framerate,
-                           "Time": self.time,
-                           "Markers": dict(self.markers),
-                           "Clusters": self.clusters,
-                           "History": self.history,
-                           "Channels": self.channels,
-                           "Identifier": self.identifier}
-            np.savez(file, allow_pickle=True, **self.fulldata)
-            print("data saved")
+            GUIFunctions.SaveData(self, file)
         self.btn_savefilt.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_savefilt.setEnabled(True)
         self.btn_savedatasel.setStyleSheet(u"background-color: rgb(0, 255, 0);")
@@ -569,24 +551,8 @@ class Main(QMainWindow, Ui_MainWindow):
         filedialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         filedialog.selectFile(f'{self.filename[:-4]}_spikesorted')
         if filedialog.exec():
-            self.fulldata={"Datatype": self.datatype,
-                           "Data": self.data,
-                           "Framerate": self.framerate,
-                           "Time": self.time,
-                           "Markers": dict(self.markers),
-                           "Clusters": self.clusters,
-                           "History": self.history,
-                           "Channels": self.channels,
-                           "Identifier": self.identifier}
             file=filedialog.selectedFiles()[0]
-            #Create dataframe with first column containing file info
-            fdf=pd.DataFrame({"File info": [self.datatype, self.framerate, self.identifier]+self.history})
-            #Add a columns per cluster with timestamps of spikes
-            for ii,channel in enumerate(self.clusters):
-                for clus in channel:
-                    sdf=pd.DataFrame({f'{self.fulldata["Channels"][ii]} Cluster {clus[4][0]}': clus[1][~np.isnan(clus[1])]})
-                    fdf=pd.concat([fdf,sdf], axis=1)
-            fdf.to_csv(file, index=False)
+            GUIFunctions.ExportAsCSV(self, file)
         self.btn_exportcsv.setStyleSheet(u"background-color: rgb(0, 255, 0);")
         self.btn_exportcsv.setEnabled(True)
     
