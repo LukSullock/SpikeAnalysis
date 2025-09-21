@@ -26,7 +26,8 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QSpinBox, QFileDialog,
                              QCheckBox, QLabel, QDoubleSpinBox, QMessageBox)
 from modules.GUI.Ui_SpikeAnalysis import Ui_MainWindow
 from modules.GUI import GUIFunctions
- 
+
+
 class Main(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(Main, self).__init__()
@@ -76,15 +77,10 @@ class Main(QMainWindow, Ui_MainWindow):
         self.framerate=0
         self.history=[]
         self.identifier="001"
+        self.channels=[]
         #All data
-        self.fulldata={"Datatype": self.datatype,
-                       "Data": self.data,
-                       "Framerate": self.framerate,
-                       "Time": self.time,
-                       "Markers": self.markers,
-                       "Clusters": self.clusters,
-                       "History": self.history,
-                       "Identifier": self.identifier}
+        self.SetFulldata()
+        
         #Plot canvasses
         self.cnvs_rawrecording=self.plt_container_raw.canvas
         self.cnvs_unfiltrecording=self.plt_container_unfilt.canvas
@@ -155,7 +151,18 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_getcrosscorr.setEnabled(False)
         #Disable batch action, since that is not implemented by default
         self.actionBatch_analysis.setEnabled(False)
-        
+    
+    def SetFulldata(self):
+        self.fulldata={"Datatype": self.datatype,
+                       "Data": self.data,
+                       "Framerate": self.framerate,
+                       "Time": self.time,
+                       "Markers": dict(self.markers),
+                       "Clusters": self.clusters,
+                       "History": self.history,
+                       "Channels": self.channels,
+                       "Identifier": self.identifier}
+    
     def NextTab(self):
         """Method to advance the displayed tab to the next one."""
         indx=self.tabWidget.currentIndex()
@@ -217,9 +224,9 @@ class Main(QMainWindow, Ui_MainWindow):
     def BatchWindow(self):
         """
         Method for batch analysis, not implemented by default.
-        See the wiki for how to implement this. (Add link)
+        See the wiki for how to implement this.
+            https://github.com/LukSullock/SpikeAnalysis/wiki/Adding-functionalities-to-the-Spike-Analysis-Tool
         """
-        pass
     
     def LoadData(self, plotloadeddata=True):
         """
@@ -278,15 +285,7 @@ class Main(QMainWindow, Ui_MainWindow):
                 SNRtxt=Decimal(str(SNR))
                 SNRtxt=SNRtxt.quantize(Decimal('0.0001'), ROUND_HALF_UP) #Proper rounding
                 self.cb_channelsnr.addItem(f'Channel {ii+1}: {SNRtxt}')
-            self.fulldata={"Datatype": self.datatype,
-                           "Data": self.data,
-                           "Framerate": self.framerate,
-                           "Time": self.time,
-                           "Markers": dict(self.markers),
-                           "Clusters": self.clusters,
-                           "History": self.history,
-                           "Channels": self.channels,
-                           "Identifier": self.identifier}
+            self.SetFulldata()
             #Add new channels in data selection tab
             for ii in reversed(range(len(self.cbs_channels))):
                 self.cbs_channels[ii].setParent(None)

@@ -627,15 +627,7 @@ def SaveData(self, file):
             maxhislen=len(str(his))
     for ii, _ in enumerate(self.history):
         savehis[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
-    self.fulldata={"Datatype": self.datatype,
-                   "Data": self.data,
-                   "Framerate": self.framerate,
-                   "Time": self.time,
-                   "Markers": dict(self.markers),
-                   "Clusters": self.clusters,
-                   "History": self.history,
-                   "Channels": self.channels,
-                   "Identifier": self.identifier}
+    self.SetFulldata()
     np.savez(file, allow_pickle=True, **self.fulldata)
     print("data saved")
 
@@ -649,15 +641,7 @@ def ExportAsCSV(self, file):
         String that denotes the save file location.
         
     """
-    self.fulldata={"Datatype": self.datatype,
-                   "Data": self.data,
-                   "Framerate": self.framerate,
-                   "Time": self.time,
-                   "Markers": dict(self.markers),
-                   "Clusters": self.clusters,
-                   "History": self.history,
-                   "Channels": self.channels,
-                   "Identifier": self.identifier}
+    self.SetFulldata()
     #Create dataframe with first column containing file info
     fdf=pd.DataFrame({"File info": [self.datatype, self.framerate, self.identifier]+self.history})
     #Add a columns per cluster with timestamps of spikes
