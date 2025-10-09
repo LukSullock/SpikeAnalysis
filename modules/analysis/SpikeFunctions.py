@@ -28,7 +28,8 @@ from scipy.signal import butter, iirnotch, filtfilt
 def OpenRecording(folder, filename):
     """
     Function to load in data and markers.
-    Accepted file extensions are .wav, and .npz.
+    Accepted file extensions are .wav, and .ssa.
+    .ssa files are numpy archives with a custom .ssa extension.
 
     Parameters
     ----------
@@ -107,7 +108,7 @@ def OpenRecording(folder, filename):
         history=defaults["History"]
         identifier=defaults["Identifier"]
         channels=np.array([f'Channel {ii+1}' for ii in range(ch)])
-    elif ".npz" in filename[-4:]: #SpikeAnalysis tool saved data
+    elif ".ssa" in filename: #SpikeAnalysis Tool saved data (Spike Sorting Analysis)
         npzfile=np.load(file, allow_pickle=True)
         loaddata=[]
         for key in defaults.keys():

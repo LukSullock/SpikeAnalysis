@@ -628,7 +628,8 @@ def SaveData(self, file):
     for ii, _ in enumerate(self.history):
         savehis[ii]=np.array(self.history[ii], dtype=f'U{maxhislen}')
     self.SetFulldata()
-    np.savez(file, allow_pickle=True, **self.fulldata)
+    with open(file, 'wb') as f:
+        np.savez(f, allow_pickle=True, **self.fulldata)
     print("data saved")
 
 def ExportAsCSV(self, file):

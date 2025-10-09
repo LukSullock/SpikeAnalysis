@@ -257,7 +257,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_import.repaint()
         filedialog=QFileDialog(self)
         filedialog.setWindowTitle("Open file...")
-        filedialog.setNameFilters(["All (*.npz *.wav)","Numpy archive (*.npz)", "Audio file (*.wav)"])
+        filedialog.setNameFilters(["All (*.ssa *.wav)","Numpy archive (*.ssa)", "Audio file (*.wav)"])
         if filedialog.exec():
             self.btn_loadmarkers.setEnabled(True)
             self.btn_loadmarkers_2.setEnabled(True)
@@ -310,7 +310,7 @@ class Main(QMainWindow, Ui_MainWindow):
                             self.ch_cutoff.setChecked(True)
                             self.sp_cutoff.setValue(cutoff_thresh)
                         elif "thresholds" in his:
-                            #Clear thresholds
+                            #Clear the thresholds in the GUI
                             while self.sps_thresholds:
                                 self.RemoveThreshold()
                             thrstring=his.split(": ")[-1]
@@ -527,7 +527,7 @@ class Main(QMainWindow, Ui_MainWindow):
         self.btn_savespikes.repaint()
         filedialog=QFileDialog(self)
         filedialog.setWindowTitle("Save file as...")
-        filedialog.setNameFilter("Numpy archive (*.npz)")
+        filedialog.setNameFilter("Numpy archive (*.ssa)")
         filedialog.setAcceptMode(QFileDialog.AcceptMode.AcceptSave)
         filedialog.selectFile(f'{self.filename[:-4]}_{extension}')
         if filedialog.exec():
