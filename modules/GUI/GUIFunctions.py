@@ -208,7 +208,16 @@ def UpdateMarkers(self, starttimes, stoptimes, fdata):
     self.cnvs_datasel.draw()
     #Add marker time stamps to the marker string
     colours=itertools.cycle(TABLEAU_COLORS)
-    self.lbl_markers.setText(f"Markers:\n{'\n'.join([f'{key}, {next(colours)[4:]}: {[float(mark) for mark in self.markers[key]]}' for key in self.markers.keys()])}")
+    # self.lbl_markers.setText(f"Markers:\n{'\n'.join([f'{key}, {next(colours)[4:]}: {[float(mark) for mark in self.markers[key]]}' for key in self.markers.keys()])}")
+    marker_lines = [
+        f"{key}, {next(colours)[4:]}: "
+        f"{[float(mark) for mark in self.markers[key]]}"
+        for key in self.markers.keys()
+        ] #JH added
+    
+    self.lbl_markers.setText(
+        "Markers:\n" + "\n".join(marker_lines)
+        ) #JH added
     return vlines, markers
 
 def ViewDataSel(self):
@@ -276,8 +285,8 @@ def ApplyDataSel(self):
     [self.verticalLayout.insertWidget(len(self.verticalLayout)-1, cb) for cb in self.cbs_channels]
     #Update markers
     self.markers=markers
-    colours=itertools.cycle(TABLEAU_COLORS)
-    self.lbl_markers.setText(f"Markers:\n{'\n'.join([f'{key}, {next(colours)[4:]}: {self.markers[key]}' for key in self.markers.keys()])}")
+    # colours=itertools.cycle(TABLEAU_COLORS)
+    # self.lbl_markers.setText(f"Markers:\n{'\n'.join([f'{key}, {next(colours)[4:]}: {self.markers[key]}' for key in self.markers.keys()])}")
     starttimes=[dsp.value()*self.framerate for dsp in self.dsps_starttimes]
     stoptimes=[dsp.value()*self.framerate for dsp in self.dsps_stoptimes]
     UpdateMarkers(self, starttimes, stoptimes, self.data)
@@ -427,7 +436,7 @@ def AverageWaveform(self, min_val=5, max_val=10):
             for spike in clus[1]:
                 spike=spike[~np.isnan(spike)]
                 if spike.size>0:
-                    wvf_y=self.data[ii][int(spike*self.framerate-(min_val*self.framerate/1000)):int(spike*self.framerate+(max_val*self.framerate/1000))]
+                    wvf_y=self.data[ii][int(spike[0]*self.framerate-(min_val*self.framerate/1000)):int(spike[0]*self.framerate+(max_val*self.framerate/1000))]
                     if len(wvf_y)==len(wvf_x):
                         all_wvf_cl.append([wvf_y, 0.5, 0.3, next(colours)])
             #Add mean and standard deviation then plot the data, if there is any
