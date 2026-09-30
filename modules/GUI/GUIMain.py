@@ -411,8 +411,11 @@ class Main(QMainWindow, Ui_MainWindow):
             with open(file, encoding="utf8") as csvfile:
                 markersCSV=np.genfromtxt(csvfile, delimiter=',')
             self.markers=defaultdict(list)
-            for key in markersCSV:
-                self.markers[key[0]].append(key[1])
+            if np.isscalar(markersCSV[0]):
+                self.markers[markersCSV[0]].append(markersCSV[1])
+            else:
+                for key in markersCSV:
+                    self.markers[key[0]].append(key[1])
             starttimes=[]
             stoptimes=[]
             for his in self.history:
